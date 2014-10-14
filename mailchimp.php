@@ -3,7 +3,7 @@
 Plugin Name: Gravity Forms MailChimp Add-On
 Plugin URI: http://www.gravityforms.com
 Description: Integrates Gravity Forms with MailChimp allowing form submissions to be automatically sent to your MailChimp account
-Version: 2.4.1
+Version: 2.4.5
 Author: rocketgenius
 Author URI: http://www.rocketgenius.com
 
@@ -33,7 +33,7 @@ class GFMailChimp {
     private static $path = "gravityformsmailchimp/mailchimp.php";
     private static $url = "http://www.gravityforms.com";
     private static $slug = "gravityformsmailchimp";
-    private static $version = "2.4.1";
+    private static $version = "2.4.5";
     private static $min_gravityforms_version = "1.7.6.11";
     private static $supported_fields = array("checkbox", "radio", "select", "text", "website", "textarea", "email", "hidden", "number", "phone", "multiselect", "post_title",
 		                            "post_tags", "post_custom_field", "post_content", "post_excerpt");
@@ -111,6 +111,10 @@ class GFMailChimp {
 
             //loading data class
             require_once(self::get_base_path() . "/data.php");
+             
+             //loading Gravity Forms tooltips
+            require_once(GFCommon::get_base_path() . "/tooltips.php");
+            add_filter('gform_tooltips', array('GFMailChimp', 'tooltips'));
 
             add_action('wp_ajax_rg_update_feed_active', array('GFMailChimp', 'update_feed_active'));
             add_action('wp_ajax_gf_select_mailchimp_form', array('GFMailChimp', 'select_mailchimp_form'));
@@ -188,8 +192,8 @@ class GFMailChimp {
         else{
             $version_info = RGMailChimpUpgrade::get_version_info(self::$slug, self::get_key(), self::$version);
 
-            if(!$version_info["is_valid_key"]){
-                $new_version = version_compare(self::$version, $version_info["version"], '<') ? __('There is a new version of Gravity Forms MailChimp Add-On available.', 'gravityformsmailchimp') .' <a class="thickbox" title="Gravity Forms MailChimp Add-On" href="plugin-install.php?tab=plugin-information&plugin=' . self::$slug . '&TB_iframe=true&width=640&height=808">'. sprintf(__('View version %s Details', 'gravityformsmailchimp'), $version_info["version"]) . '</a>. ' : '';
+            if(!rgar($version_info, "is_valid_key")){
+                $new_version = version_compare(self::$version, rgar($version_info, "version"), '<') ? __('There is a new version of Gravity Forms MailChimp Add-On available.', 'gravityformsmailchimp') .' <a class="thickbox" title="Gravity Forms MailChimp Add-On" href="plugin-install.php?tab=plugin-information&plugin=' . self::$slug . '&TB_iframe=true&width=640&height=808">'. sprintf(__('View version %s Details', 'gravityformsmailchimp'), $version_info["version"]) . '</a>. ' : '';
                 $message = $new_version . sprintf(__('%sRegister%s your copy of Gravity Forms to receive access to automatic upgrades and support. Need a license key? %sPurchase one now%s.', 'gravityformsmailchimp'), '<a href="admin.php?page=gf_settings">', '</a>', '<a href="http://www.gravityforms.com">', '</a>') . '</div></td>';
                 RGMailChimpUpgrade::display_plugin_message($message);
             }
@@ -248,7 +252,8 @@ class GFMailChimp {
             "mailchimp_welcome" => "<h6>" . __("Send Welcome Email", "gravityformsmailchimp") . "</h6>" . __("When this option is enabled, users will receive an automatic welcome email from MailChimp upon being added to your MailChimp list.", "gravityformsmailchimp"),
             "mailchimp_map_fields" => "<h6>" . __("Map Fields", "gravityformsmailchimp") . "</h6>" . __("Associate your MailChimp merge variables to the appropriate Gravity Form fields by selecting.", "gravityformsmailchimp"),
             "mailchimp_optin_condition" => "<h6>" . __("Opt-In Condition", "gravityformsmailchimp") . "</h6>" . __("When the opt-in condition is enabled, form submissions will only be exported to MailChimp when the condition is met. When disabled all form submissions will be exported.", "gravityformsmailchimp"),
-            "mailchimp_double_optin" => "<h6>" . __("Double Opt-In", "gravityformsmailchimp") . "</h6>" . __("When the double opt-in option is enabled, MailChimp will send a confirmation email to the user and will only add them to your MailChimp list upon confirmation.", "gravityformsmailchimp")
+            "mailchimp_double_optin" => "<h6>" . __("Double Opt-In", "gravityformsmailchimp") . "</h6>" . __("When the double opt-in option is enabled, MailChimp will send a confirmation email to the user and will only add them to your MailChimp list upon confirmation.", "gravityformsmailchimp"),
+            "mailchimp_groups" => "<h6>" . __("Groups", "gravityformsmailchimp") . "</h6>" . __("When one or more groups are enabled, users will be assigned to the groups in addition to being subscribed to the MailChimp list. When disabled, users will not be assigned to groups.", "gravityformsmailchimp")
         );
         return array_merge($tooltips, $mailchimp_tooltips);
     }
@@ -1134,9 +1139,7 @@ class GFMailChimp {
 			self::log_debug("Number of groups: " . count($groupings));
             $str = "<div id='mailchimp_groups_container' valign='top' class='margin_vertical_10'>";
 
-            $group_tooltip = "<a title='&lt;h6&gt;Groups&lt;/h6&gt;When one or more groups are enabled, users will be assigned to the groups in addition to being subscribed to the MailChimp list. When disabled, users will not be assigned to groups.' class='tooltip tooltip_mailchimp_groups' onclick='return false;' href='#'>(?)</a>";
-
-            $str .= "   <label for='mailchimp_groups' class='left_header'>" . __("Groups", "gravityformsmailchimp") . " " . $group_tooltip . "</label>";
+            $str .= "   <label for='mailchimp_groups' class='left_header'>" . __("Groups" , "gravityformsmailchimp") . " " . gform_tooltip("mailchimp_groups","", true) . "</label>";
             $str .= "   <div id='mailchimp_groups'>";
             $str .= "        <table>";
 
@@ -1684,7 +1687,7 @@ class GFMailChimp {
             self::log_debug("{$email} is already on the list; updating info");
 
             //retrieve existing groups for subscribers; add existing groups to selected groups from form so that existing groups are maintained for that subscriber
-            $current_groups = $member_info["data"][0]["merges"]["GROUPINGS"];
+            $current_groups = isset( $member_info["data"][0]["merges"]["GROUPINGS"] ) ? $member_info["data"][0]["merges"]["GROUPINGS"] : false;
 
             $keep_existing_groups = apply_filters("gform_mailchimp_keep_existing_groups_{$form["id"]}", apply_filters("gform_mailchimp_keep_existing_groups", true, $form, $entry, $feed), $form, $entry, $feed);
             if(is_array($current_groups) && $keep_existing_groups){

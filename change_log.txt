@@ -1,4 +1,21 @@
 ------------------------------------------------------------------------------------------------------------------
+Version 2.4.5
+	- Fixed notice when GROUPINGS was not set
+
+------------------------------------------------------------------------------------------------------------------
+Version 2.4.4
+	- Updated plugin updated method so that it takes advantage of proxy manager to get around the blacklisted IP issue
+
+------------------------------------------------------------------------------------------------------------------
+Version 2.4.3
+	- Fixed issue with tooltip for groups not loading correctly and causing Fatal Error
+	- Fixed notices
+	
+------------------------------------------------------------------------------------------------------------------
+Version 2.4.2
+	- Fixed tooltip display for the Groups setting in the admin
+
+------------------------------------------------------------------------------------------------------------------
 Version 2.4.1
 	- Fixed issue where field labels with newlines may break the edit feed UI
 	
