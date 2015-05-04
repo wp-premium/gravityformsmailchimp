@@ -1,42 +1,64 @@
 ------------------------------------------------------------------------------------------------------------------
-Version 2.4.5
-	- Fixed notice when GROUPINGS was not set
+Version 3.6
+    - Added filter to allow changing parameters to the API method that returns the MailChimp Lists.
+    - Added Spanish (es_ES) translation.
+    - Fixed a low severity security vulnerability in the admin area which could be exploited by authenticated users with form administration permissions.
+    - Fixed an issue with the members existing groups being lost if no new groups were selected and gform_mailchimp_keep_existing_groups is true.
 
 ------------------------------------------------------------------------------------------------------------------
-Version 2.4.4
-	- Updated plugin updated method so that it takes advantage of proxy manager to get around the blacklisted IP issue
+Version 3.5
+    - Updated required version of Gravity Forms to 1.8.17.
+    - Fixed an issue with Address fields where MailChimp would ignore the passed string if it did not contain the street address, city, state, or zip.
 
 ------------------------------------------------------------------------------------------------------------------
-Version 2.4.3
-	- Fixed issue with tooltip for groups not loading correctly and causing Fatal Error
-	- Fixed notices
-	
-------------------------------------------------------------------------------------------------------------------
-Version 2.4.2
-	- Fixed tooltip display for the Groups setting in the admin
+Version 3.4
+    - Added support for the middle name input when preparing Name field values.
+    - Updated required version of Gravity Forms to 1.9.
+    - Fixed an issue causing checkbox fields not to be mapped under certain conditions.
+    - Fixed fatal error with PHP < 5.4.
 
 ------------------------------------------------------------------------------------------------------------------
-Version 2.4.1
-	- Fixed issue where field labels with newlines may break the edit feed UI
-	
-------------------------------------------------------------------------------------------------------------------
-Version 2.4
-	- Updated code to assign subscribers to groups correctly when subscription was dependent on payment.
-    - Updated files to not have the closing php tag and blank lines at the end.
-
-	- Fixed issue with entry not being sent to MailChimp when "only send when payment is received" is enabled and payment ends up being $0.
-    - Fixed issue causing issues with opt-in condition when configured to send to MailChimp only when payment is received.
+Version 3.3
+    - Updated logging statements.
+	- Updated the gform_mailchimp_field_value filter to have an additional parameter which includes the name of the custom mapped field.
+	- Fixed issue causing address not to be mapped properly under certain scenarios.
+	- Fixed Notice.
+    - Fixed an issue with the concatenated string for Checkbox fields not being cleared before the next field is processed.
+    - Fixed a warning when MailChimp interest groups aren't enabled on the list.
 
 ------------------------------------------------------------------------------------------------------------------
-Version 2.3
-    - Updated tooltip script from qTip to jQuery UI
-	- Fixed typo "unsubscrbed" in debug statement
-	- Fixed issue where upgrade class was not always included when MailChimp details are written on the plugins page
+Version 3.2
+    - Added hook to allow args to be changed before sending submission to MailChimp.
+        add_filter( 'gform_mailchimp_args_pre_subscribe', 'override_mailchimp_params', 10, 4 );
+        function override_mailchimp_params( $params, $form, $entry, $feed ) {
+            // do stuff
+
+            return $params;
+        }
+    - Added hook to select whether empty mapped fields should override existing values on Mailchimp; defaults to override.
+        add_filter('gform_mailchimp_override_empty_fields', '__return_false' );
+    - Fixed issue where existing groups were not maintained for users already subscribed.
+	- Fixed notice messages.
+	- Fixed fatal error displayed on certain situations.
+
+------------------------------------------------------------------------------------------------------------------
+Version 3.1
+    - Fixed issue where grouping assignment was not working for already subscribed users
+	- Fixed issue where a fatal error is displayed in certain situations
+	- Fixed issue with upgrade that caused configuration not to be copied over in certain situations
+
+------------------------------------------------------------------------------------------------------------------
+Version 3.0
+    - Added integration with Add-On Framework
+	- Added support for sending selected checkboxes as a concatenated string
+	- Updated POT file
+	- Updated required version of Gravity Forms to 1.8.17
+	- Updated to MailChimp API version 2.0.
+    - Updated files removing closing php tag at the end.
+	- Fixed a warning when MailChimp interest groups aren't enabled on the list.
 
 ------------------------------------------------------------------------------------------------------------------
 Version 2.2
-    - Updated automatic upgrade so that it caches remote requests for 12 hours (even on plugin's page)
-    - Fixed issue with groups not being removed correctly when using the filter "gform_mailchimp_keep_existing_groups" to override default functionality and allow groups to be removed.
 	- Updated phone number when set to standard format "(###)### - ####" to send in required format of ###-###-####
 
 ------------------------------------------------------------------------------------------------------------------
