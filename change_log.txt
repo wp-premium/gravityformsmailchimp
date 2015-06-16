@@ -1,4 +1,17 @@
 ------------------------------------------------------------------------------------------------------------------
+Version 3.6.3
+    - Added $transaction, either Update or Subscribe, as the fifth parameter of the gform_mailchimp_args_pre_subscribe filter.
+    - Fixed an issue with the location of the gform_mailchimp_args_pre_subscribe filter.
+
+------------------------------------------------------------------------------------------------------------------
+Version 3.6.2
+    - Fixed an issue with the upgrade routine which caused it run even if a pre-framework version hadn't been installed.
+
+------------------------------------------------------------------------------------------------------------------
+Version 3.6.1
+    - Remove plugin settings header and add line break after plugin settings description.
+
+------------------------------------------------------------------------------------------------------------------
 Version 3.6
     - Added filter to allow changing parameters to the API method that returns the MailChimp Lists.
     - Added Spanish (es_ES) translation.

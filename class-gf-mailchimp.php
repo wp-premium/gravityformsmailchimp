@@ -57,8 +57,6 @@ class GFMailChimp extends GFFeedAddOn {
 
 		parent::init_admin();
 
-		$this->ensure_upgrade();
-
 		add_filter( 'gform_addon_navigation', array( $this, 'maybe_create_menu' ) );
 	}
 
@@ -67,11 +65,11 @@ class GFMailChimp extends GFFeedAddOn {
 	public function plugin_settings_fields() {
 		return array(
 			array(
-				'title'       => __( 'MailChimp Account Information', 'gravityformsmailchimp' ),
-				'description' => sprintf(
+				'title'       => '',
+				'description' => '<p>' . sprintf(
 					__( 'MailChimp makes it easy to send email newsletters to your customers, manage your subscriber lists, and track campaign performance. Use Gravity Forms to collect customer information and automatically add them to your MailChimp subscriber list. If you don\'t have a MailChimp account, you can %1$s sign up for one here.%2$s', 'gravityformsmailchimp' ),
 					'<a href="http://www.mailchimp.com/" target="_blank">', '</a>'
-				),
+				) . '</p>',
 				'fields'      => array(
 					array(
 						'name'              => 'apiKey',
@@ -651,6 +649,10 @@ class GFMailChimp extends GFFeedAddOn {
 					'replace_interests' => true,
 					'send_welcome'      => $send_welcome,
 				);
+				$params = apply_filters( "gform_mailchimp_args_pre_subscribe_{$form['id']}",
+					apply_filters( 'gform_mailchimp_args_pre_subscribe', $params, $form, $entry, $feed, $transaction ),
+					$form, $entry, $feed, $transaction );
+
 				$this->log_debug( __METHOD__ . '(): Calling - subscribe, Parameters ' . print_r( $params, true ) );
 				$subscribe_or_update = $api->call( 'lists/subscribe', $params );
 			} catch ( Exception $e ) {
@@ -671,8 +673,6 @@ class GFMailChimp extends GFFeedAddOn {
 
 			$transaction = 'Update';
 
-			$params = apply_filters( "gform_mailchimp_args_pre_subscribe_{$form['id']}", apply_filters( 'gform_mailchimp_args_pre_subscribe', $params, $form, $entry, $feed ), $form, $entry, $feed );
-
 			try {
 				$params = array(
 					'id'                => $list_id,
@@ -681,6 +681,10 @@ class GFMailChimp extends GFFeedAddOn {
 					'email_type'        => 'html',
 					'replace_interests' => true,
 				);
+				$params = apply_filters( "gform_mailchimp_args_pre_subscribe_{$form['id']}",
+					apply_filters( 'gform_mailchimp_args_pre_subscribe', $params, $form, $entry, $feed, $transaction ),
+					$form, $entry, $feed, $transaction );
+
 				$this->log_debug( __METHOD__ . '(): Calling - update-member, Parameters ' . print_r( $params, true ) );
 				$subscribe_or_update = $api->call( 'lists/update-member', $params );
 			} catch ( Exception $e ) {
@@ -1034,7 +1038,10 @@ class GFMailChimp extends GFFeedAddOn {
 	//Migrate existing data to new table structure
 	public function upgrade( $previous_version ) {
 
-		$previous_is_pre_addon_framework = empty( $previous_version ) || version_compare( $previous_version, '3.0.dev1', '<' );
+		if ( empty( $previous_version ) ) {
+			$previous_version = get_option( 'gf_mailchimp_version' );
+		}
+		$previous_is_pre_addon_framework = ! empty( $previous_version ) && version_compare( $previous_version, '3.0.dev1', '<' );
 
 		if ( $previous_is_pre_addon_framework ) {
 
@@ -1146,23 +1153,6 @@ class GFMailChimp extends GFFeedAddOn {
 		}
 	}
 
-	public function ensure_upgrade() {
-
-		if ( get_option( 'gf_mailchimp_update' ) ) {
-			return false;
-		}
-
-		$feeds = $this->get_feeds();
-		if ( empty( $feeds ) ) {
-
-			//Force Add-On framework upgrade
-			$this->upgrade( '2.0' );
-		}
-
-		update_option( 'gf_mailchimp_update', 1 );
-	}
-
-
 	public function update_paypal_delay_settings( $old_delay_setting_name ) {
 		global $wpdb;
 		$this->log_debug( __METHOD__ . '(): Checking to see if there are any delay settings that need to be migrated for PayPal Standard.' );
@@ -1204,6 +1194,10 @@ class GFMailChimp extends GFFeedAddOn {
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'rg_paypal';
 
+		if ( ! $this->table_exists( $table_name ) ) {
+			return false;
+		}
+
 		$form_table_name = GFFormsModel::get_form_table_name();
 		$sql             = "SELECT s.id, s.is_active, s.form_id, s.meta, f.title as form_title
 				FROM {$table_name} s
@@ -1229,6 +1223,10 @@ class GFMailChimp extends GFFeedAddOn {
 	public function get_old_feeds() {
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'rg_mailchimp';
+
+		if ( ! $this->table_exists( $table_name ) ) {
+			return false;
+		}
 
 		$form_table_name = GFFormsModel::get_form_table_name();
 		$sql             = "SELECT s.id, s.is_active, s.form_id, s.meta, f.title as form_title
