@@ -3,7 +3,7 @@
 Plugin Name: Gravity Forms MailChimp Add-On
 Plugin URI: http://www.gravityforms.com
 Description: Integrates Gravity Forms with MailChimp allowing form submissions to be automatically sent to your MailChimp account
-Version: 3.6.3
+Version: 3.7.1
 Author: rocketgenius
 Author URI: http://www.rocketgenius.com
 Text Domain: gravityformsmailchimp
@@ -27,7 +27,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-define( 'GF_MAILCHIMP_VERSION', '3.6.3' );
+define( 'GF_MAILCHIMP_VERSION', '3.7.1' );
 
 add_action( 'gform_loaded', array( 'GF_MailChimp_Bootstrap', 'load' ), 5 );
 
