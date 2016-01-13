@@ -1,14 +1,21 @@
 ------------------------------------------------------------------------------------------------------------------
-Version 3.6.3
+Version 3.7.1
+    - Fixed an issue where the cached settings were not cleared when the add-on was uninstalled.
+    - Fixed a rare issue for some server environments where several groups could be assigned the same settings key causing js issues in the feed editor.
+    - Fixed an issue where the cached group setting keys could be lost when updating the API key on the plugin settings tab.
+
+------------------------------------------------------------------------------------------------------------------
+Version 3.7
+    - Added form and field specific versions of the gform_mailchimp_field_value filter.
+    - Added logging of group condition evaluation.
     - Added $transaction, either Update or Subscribe, as the fifth parameter of the gform_mailchimp_args_pre_subscribe filter.
+    - Updated minimum Gravity Forms version to 1.9.3.
+    - Updated 'Opt-In Condition' setting label to 'Conditional Logic'.
+    - Updated feed processing to use get_field_value() when retrieving mapped field values, enabling support for GF_Field::get_value_export with GF 1.9.12.4 and later.
+    - Updated to use GF_Field::is_conditional_logic_supported to determine which field types should be listed in the group condition fields drop down.
+    - Fixed an issue with the feed list page if the API key not valid.
     - Fixed an issue with the location of the gform_mailchimp_args_pre_subscribe filter.
-
-------------------------------------------------------------------------------------------------------------------
-Version 3.6.2
     - Fixed an issue with the upgrade routine which caused it run even if a pre-framework version hadn't been installed.
-
-------------------------------------------------------------------------------------------------------------------
-Version 3.6.1
     - Remove plugin settings header and add line break after plugin settings description.
 
 ------------------------------------------------------------------------------------------------------------------
