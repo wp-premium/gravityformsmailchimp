@@ -2,361 +2,208 @@
 
 GFForms::include_feed_addon_framework();
 
+/**
+ * Gravity Forms MailChimp Add-On.
+ *
+ * @since     1.0
+ * @package   GravityForms
+ * @author    Rocketgenius
+ * @copyright Copyright (c) 2016, Rocketgenius
+ */
 class GFMailChimp extends GFFeedAddOn {
 
+	/**
+	 * Contains an instance of this class, if available.
+	 *
+	 * @since  3.0
+	 * @access private
+	 * @var    object $_instance If available, contains an instance of this class.
+	 */
+	private static $_instance = null;
+
+	/**
+	 * Defines the version of the Mailchimp Add-On.
+	 *
+	 * @since  3.0
+	 * @access protected
+	 * @var    string $_version Contains the version, defined from mailchimp.php
+	 */
 	protected $_version = GF_MAILCHIMP_VERSION;
-	protected $_min_gravityforms_version = '1.9.3';
+
+	/**
+	 * Defines the minimum Gravity Forms version required.
+	 *
+	 * @since  3.0
+	 * @access protected
+	 * @var    string $_min_gravityforms_version The minimum version required.
+	 */
+	protected $_min_gravityforms_version = '1.9.12';
+
+	/**
+	 * Defines the plugin slug.
+	 *
+	 * @since  3.0
+	 * @access protected
+	 * @var    string $_slug The slug used for this plugin.
+	 */
 	protected $_slug = 'gravityformsmailchimp';
+
+	/**
+	 * Defines the main plugin file.
+	 *
+	 * @since  3.0
+	 * @access protected
+	 * @var    string $_path The path to the main plugin file, relative to the plugins folder.
+	 */
 	protected $_path = 'gravityformsmailchimp/mailchimp.php';
+
+	/**
+	 * Defines the full path to this class file.
+	 *
+	 * @since  3.0
+	 * @access protected
+	 * @var    string $_full_path The full path.
+	 */
 	protected $_full_path = __FILE__;
+
+	/**
+	 * Defines the URL where this Add-On can be found.
+	 *
+	 * @since  3.0
+	 * @access protected
+	 * @var    string The URL of the Add-On.
+	 */
 	protected $_url = 'http://www.gravityforms.com';
+
+	/**
+	 * Defines the title of this Add-On.
+	 *
+	 * @since  3.0
+	 * @access protected
+	 * @var    string $_title The title of the Add-On.
+	 */
 	protected $_title = 'Gravity Forms MailChimp Add-On';
+
+	/**
+	 * Defines the short title of the Add-On.
+	 *
+	 * @since  3.0
+	 * @access protected
+	 * @var    string $_short_title The short title.
+	 */
 	protected $_short_title = 'MailChimp';
+
+	/**
+	 * Defines if Add-On should use Gravity Forms servers for update data.
+	 *
+	 * @since  3.0
+	 * @access protected
+	 * @var    bool
+	 */
 	protected $_enable_rg_autoupgrade = true;
 
 	/**
-	 * Members plugin integration
+	 * Defines the capabilities needed for the Mailchimp Add-On
+	 *
+	 * @since  3.0
+	 * @access protected
+	 * @var    array $_capabilities The capabilities needed for the Add-On
 	 */
 	protected $_capabilities = array( 'gravityforms_mailchimp', 'gravityforms_mailchimp_uninstall' );
 
 	/**
-	 * Permissions
+	 * Defines the capability needed to access the Add-On settings page.
+	 *
+	 * @since  3.0
+	 * @access protected
+	 * @var    string $_capabilities_settings_page The capability needed to access the Add-On settings page.
 	 */
 	protected $_capabilities_settings_page = 'gravityforms_mailchimp';
+
+	/**
+	 * Defines the capability needed to access the Add-On form settings page.
+	 *
+	 * @since  3.0
+	 * @access protected
+	 * @var    string $_capabilities_form_settings The capability needed to access the Add-On form settings page.
+	 */
 	protected $_capabilities_form_settings = 'gravityforms_mailchimp';
+
+	/**
+	 * Defines the capability needed to uninstall the Add-On.
+	 *
+	 * @since  3.0
+	 * @access protected
+	 * @var    string $_capabilities_uninstall The capability needed to uninstall the Add-On.
+	 */
 	protected $_capabilities_uninstall = 'gravityforms_mailchimp_uninstall';
 
 	/**
-	 * @var string $merge_var_name The MailChimp list field tag name; used by gform_mailchimp_field_value.
+	 * Defines the MailChimp list field tag name.
+	 *
+	 * @since  3.7
+	 * @access protected
+	 * @var    string $merge_var_name The MailChimp list field tag name; used by gform_mailchimp_field_value.
 	 */
 	protected $merge_var_name = '';
 
-	private static $api;
-	private static $_instance = null;
+	/**
+	 * Contains an instance of the Mailchimp API library, if available.
+	 *
+	 * @since  1.0
+	 * @access protected
+	 * @var    object $api If available, contains an instance of the Mailchimp API library.
+	 */
+	private $api = null;
 
 	/**
 	 * Get an instance of this class.
 	 *
+	 * @since  3.0
+	 * @access public
+	 *
 	 * @return GFMailChimp
 	 */
 	public static function get_instance() {
-		if ( self::$_instance == null ) {
-			self::$_instance = new GFMailChimp();
+
+		if ( null === self::$_instance ) {
+			self::$_instance = new self;
 		}
 
 		return self::$_instance;
-	}
 
-	// # FEED PROCESSING -----------------------------------------------------------------------------------------------
-
-	/**
-	 * Process the feed, subscribe the user to the list.
-	 *
-	 * @param array $feed The feed object to be processed.
-	 * @param array $entry The entry object currently being processed.
-	 * @param array $form The form object currently being processed.
-	 *
-	 * @return void
-	 */
-	public function process_feed( $feed, $entry, $form ) {
-		$this->log_debug( __METHOD__ . '(): Processing feed.' );
-
-		// login to MailChimp
-		$api = $this->get_api();
-		if ( ! is_object( $api ) ) {
-			$this->log_error( __METHOD__ . '(): Failed to set up the API.' );
-
-			return;
-		}
-
-		$feed_meta = $feed['meta'];
-
-		// retrieve name => value pairs for all fields mapped in the 'mappedFields' field map
-		$field_map            = $this->get_field_map_fields( $feed, 'mappedFields' );
-		$this->merge_var_name = 'EMAIL';
-		$email                = $this->get_field_value( $form, $entry, $field_map['EMAIL'] );
-
-		// abort if email is invalid
-		if ( GFCommon::is_invalid_or_empty_email( $email ) ) {
-			$this->log_error( __METHOD__ . "(): A valid Email address must be provided." );
-
-			return;
-		}
-
-		$override_empty_fields = gf_apply_filters( 'gform_mailchimp_override_empty_fields', $form['id'], true, $form, $entry, $feed );
-		if ( ! $override_empty_fields ) {
-			$this->log_debug( __METHOD__ . '(): Empty fields will not be overridden.' );
-		}
-
-		$merge_vars = array();
-		foreach ( $field_map as $name => $field_id ) {
-
-			if ( $name == 'EMAIL' ) {
-				continue;
-			}
-
-			$this->merge_var_name = $name;
-			$field_value          = $this->get_field_value( $form, $entry, $field_id );
-
-			if ( empty( $field_value ) && ! $override_empty_fields ) {
-				continue;
-			} else {
-				$merge_vars[ $name ] = $field_value;
-			}
-
-		}
-
-		$mc_groupings = $this->get_mailchimp_groups( $feed_meta['mailchimpList'] );
-
-		if ( ! empty ( $mc_groupings ) ) {
-			$groupings = array();
-
-			foreach ( $mc_groupings as $grouping ) {
-
-				if ( ! is_array( $grouping['groups'] ) ) {
-					continue;
-				}
-
-				$groups = array();
-
-				foreach ( $grouping['groups'] as $group ) {
-
-					$this->log_debug( __METHOD__ . '(): Evaluating condition for group: ' . rgar( $group, 'name' ) );
-					$group_settings = $this->get_group_settings( $group, $grouping['id'], $feed );
-					if ( ! $this->is_group_condition_met( $group_settings, $form, $entry ) ) {
-						continue;
-					}
-
-					$groups[] = $group['name'];
-				}
-
-				if ( ! empty( $groups ) ) {
-					$groupings[] = array(
-						'name'   => $grouping['name'],
-						'groups' => $groups,
-					);
-
-				}
-			}
-
-			if ( ! empty( $groupings ) ) {
-				$merge_vars['GROUPINGS'] = $groupings;
-			}
-		}
-
-		$this->log_debug( __METHOD__ . "(): Checking to see if $email is already on the list." );
-		$list_id = $feed_meta['mailchimpList'];
-		try {
-			$params      = array(
-				'id'     => $list_id,
-				'emails' => array(
-					array( 'email' => $email ),
-				)
-			);
-			$member_info = $api->call( 'lists/member-info', $params );
-		} catch ( Exception $e ) {
-			$this->log_error( __METHOD__ . '(): ' . $e->getCode() . ' - ' . $e->getMessage() );
-		}
-
-		if ( empty( $member_info ) ) {
-			$this->log_error( __METHOD__ . '(): There was an error while trying to retrieve member information. Unable to process feed.' );
-
-			return;
-		}
-
-		$subscribe_or_update = false;
-		$member_not_found    = absint( rgar( $member_info, 'error_count' ) ) > 0;
-		$member_status       = rgars( $member_info, 'data/0/status' );
-
-		if ( $member_not_found || $member_status != 'subscribed' ) {
-			$allow_resubscription = gf_apply_filters( 'gform_mailchimp_allow_resubscription', $form['id'], true, $form, $entry, $feed );
-			if ( $member_status == 'unsubscribed' && ! $allow_resubscription ) {
-				$this->log_debug( __METHOD__ . '(): User is unsubscribed and resubscription is not allowed.' );
-
-				return;
-			}
-
-			// adding member to list
-			// $member_status != 'subscribed', 'pending', 'cleaned' need to be 're-subscribed' to send out confirmation email
-			$this->log_debug( __METHOD__ . "(): {$email} is either not on the list or on the list but the status is not subscribed - status: " . $member_status . '; adding to list.' );
-			$transaction = 'Subscribe';
-
-			try {
-				$params = array(
-					'id'                => $list_id,
-					'email'             => array( 'email' => $email ),
-					'merge_vars'        => $merge_vars,
-					'email_type'        => 'html',
-					'double_optin'      => $feed_meta['double_optin'] == true,
-					'update_existing'   => false,
-					'replace_interests' => true,
-					'send_welcome'      => $feed_meta['sendWelcomeEmail'] == true,
-				);
-				$params = gf_apply_filters( 'gform_mailchimp_args_pre_subscribe', $form['id'], $params, $form, $entry, $feed, $transaction );
-
-				$this->log_debug( __METHOD__ . '(): Calling - subscribe, Parameters ' . print_r( $params, true ) );
-				$subscribe_or_update = $api->call( 'lists/subscribe', $params );
-			} catch ( Exception $e ) {
-				$this->log_error( __METHOD__ . '(): ' . $e->getCode() . ' - ' . $e->getMessage() );
-			}
-		} else {
-			// updating member
-			$this->log_debug( __METHOD__ . "(): {$email} is already on the list; updating info." );
-
-			$keep_existing_groups = gf_apply_filters( 'gform_mailchimp_keep_existing_groups', $form['id'], true, $form, $entry, $feed );
-			$transaction          = 'Update';
-
-			/**
-			 * Switching to setting the replace_interests parameter instead of using append_groups()
-			 * MailChimp now handles merging the new group selections with any existing groups at their end
-			 */
-
-//			// retrieve existing groups for subscribers
-//			$current_groups = rgar( $member_info['data'][0]['merges'], 'GROUPINGS' );
-//			if ( is_array( $current_groups ) && $keep_existing_groups ) {
-//				// add existing groups to selected groups from form so that existing groups are maintained for that subscriber
-//				$merge_vars = $this->append_groups( $merge_vars, $current_groups );
-//			}
-
-			try {
-				$params = array(
-					'id'                => $list_id,
-					'email'             => array( 'email' => $email ),
-					'merge_vars'        => $merge_vars,
-					'email_type'        => 'html',
-					'replace_interests' => ! $keep_existing_groups,
-				);
-				$params = gf_apply_filters( 'gform_mailchimp_args_pre_subscribe', $form['id'], $params, $form, $entry, $feed, $transaction );
-
-				$this->log_debug( __METHOD__ . '(): Calling - update-member, Parameters ' . print_r( $params, true ) );
-				$subscribe_or_update = $api->call( 'lists/update-member', $params );
-			} catch ( Exception $e ) {
-				$this->log_error( __METHOD__ . '(): ' . $e->getCode() . ' - ' . $e->getMessage() );
-			}
-		}
-
-		if ( rgar( $subscribe_or_update, 'email' ) ) {
-			//email will be returned if successful
-			$this->log_debug( __METHOD__ . "(): {$transaction} successful." );
-		} else {
-			$this->log_error( __METHOD__ . "(): {$transaction} failed." );
-		}
 	}
 
 	/**
-	 * Returns the value of the selected field.
+	 * Autoload the required libraries.
 	 *
-	 * @param array $form The form object currently being processed.
-	 * @param array $entry The entry object currently being processed.
-	 * @param string $field_id The ID of the field being processed.
+	 * @since  4.0
+	 * @access public
 	 *
-	 * @return array
+	 * @uses GFAddOn::is_gravityforms_supported()
 	 */
-	public function get_field_value( $form, $entry, $field_id ) {
-		$field_value = '';
+	public function pre_init() {
 
-		switch ( strtolower( $field_id ) ) {
+		parent::pre_init();
 
-			case 'form_title':
-				$field_value = rgar( $form, 'title' );
-				break;
+		if ( $this->is_gravityforms_supported() ) {
 
-			case 'date_created':
-				$date_created = rgar( $entry, strtolower( $field_id ) );
-				if ( empty( $date_created ) ) {
-					//the date created may not yet be populated if this function is called during the validation phase and the entry is not yet created
-					$field_value = gmdate( 'Y-m-d H:i:s' );
-				} else {
-					$field_value = $date_created;
-				}
-				break;
-
-			case 'ip':
-			case 'source_url':
-				$field_value = rgar( $entry, strtolower( $field_id ) );
-				break;
-
-			default:
-
-				$field = GFFormsModel::get_field( $form, $field_id );
-
-				if ( is_object( $field ) ) {
-
-					$is_integer = $field_id == intval( $field_id );
-					$input_type = RGFormsModel::get_input_type( $field );
-
-					if ( $is_integer && $input_type == 'address' ) {
-
-						$field_value = $this->get_full_address( $entry, $field_id );
-
-					} elseif ( $is_integer && $input_type == 'name' ) {
-
-						$field_value = $this->get_full_name( $entry, $field_id );
-
-					} elseif ( $is_integer && $input_type == 'checkbox' ) {
-
-						$selected = array();
-						foreach ( $field->inputs as $input ) {
-							$index = (string) $input['id'];
-							if ( ! rgempty( $index, $entry ) ) {
-								$selected[] = $this->maybe_override_field_value( rgar( $entry, $index ), $form, $entry, $index );
-							}
-						}
-						$field_value = implode( ', ', $selected );
-
-					} elseif ( $input_type == 'phone' && $field->phoneFormat == 'standard' ) {
-
-						// reformat standard format phone to match MailChimp format
-						// format: NPA-NXX-LINE (404-555-1212) when US/CAN
-						$field_value = rgar( $entry, $field_id );
-						if ( ! empty( $field_value ) && preg_match( '/^\D?(\d{3})\D?\D?(\d{3})\D?(\d{4})$/', $field_value, $matches ) ) {
-							$field_value = sprintf( '%s-%s-%s', $matches[1], $matches[2], $matches[3] );
-						}
-
-					} else {
-
-						if ( is_callable( array( 'GF_Field', 'get_value_export' ) ) ) {
-							$field_value = $field->get_value_export( $entry, $field_id );
-						} else {
-							$field_value = rgar( $entry, $field_id );
-						}
-
-					}
-
-				} else {
-
-					$field_value = rgar( $entry, $field_id );
-
-				}
+			// Load the Mailgun API library.
+			if ( ! class_exists( 'GF_MailChimp_API' ) ) {
+				require_once( 'includes/class-gf-mailchimp-api.php' );
+			}
 
 		}
 
-		return $this->maybe_override_field_value( $field_value, $form, $entry, $field_id );
 	}
-
-	/**
-	 * Use the legacy gform_mailchimp_field_value filter instead of the framework gform_SLUG_field_value filter.
-	 *
-	 * @param string $field_value The field value.
-	 * @param array $form The form object currently being processed.
-	 * @param array $entry The entry object currently being processed.
-	 * @param string $field_id The ID of the field being processed.
-	 *
-	 * @return string
-	 */
-	public function maybe_override_field_value( $field_value, $form, $entry, $field_id ) {
-
-		return gf_apply_filters( 'gform_mailchimp_field_value', array(
-			$form['id'],
-			$field_id
-		), $field_value, $form['id'], $field_id, $entry, $this->merge_var_name );
-	}
-
-
-	// # ADMIN FUNCTIONS -----------------------------------------------------------------------------------------------
 
 	/**
 	 * Plugin starting point. Handles hooks, loading of language files and PayPal delayed payment support.
+	 *
+	 * @since  3.0
+	 * @access public
+	 *
+	 * @uses GFFeedAddOn::add_delayed_payment_support()
 	 */
 	public function init() {
 
@@ -364,219 +211,168 @@ class GFMailChimp extends GFFeedAddOn {
 
 		$this->add_delayed_payment_support(
 			array(
-				'option_label' => esc_html__( 'Subscribe user to MailChimp only when payment is received.', 'gravityformsmailchimp' )
+				'option_label' => esc_html__( 'Subscribe user to MailChimp only when payment is received.', 'gravityformsmailchimp' ),
 			)
 		);
 
 	}
 
 	/**
-	 * Clear the cached settings on uninstall.
+	 * Remove unneeded settings.
 	 *
-	 * @return bool
+	 * @since  4.0
+	 * @access public
 	 */
 	public function uninstall() {
+		
 		parent::uninstall();
+		
 		GFCache::delete( 'mailchimp_plugin_settings' );
-
-		return true;
+		delete_option( 'gf_mailchimp_settings' );
+		delete_option( 'gf_mailchimp_version' );
+		
 	}
 
-	// ------- Plugin settings -------
+	/**
+	 * Register needed styles.
+	 *
+	 * @since  4.0
+	 * @access public
+	 *
+	 * @return array
+	 */
+	public function styles() {
+
+		$styles = array(
+			array(
+				'handle'  => $this->_slug . '_form_settings',
+				'src'     => $this->get_base_url() . '/css/form_settings.css',
+				'version' => $this->_version,
+				'enqueue' => array( 'admin_page' => array( 'form_settings' ) ),
+			),
+		);
+
+		return array_merge( parent::styles(), $styles );
+
+	}
+
+
+
+
+
+	// # PLUGIN SETTINGS -----------------------------------------------------------------------------------------------
 
 	/**
 	 * Configures the settings which should be rendered on the add-on settings tab.
 	 *
+	 * @since  3.0
+	 * @access public
+	 *
 	 * @return array
 	 */
 	public function plugin_settings_fields() {
+
 		return array(
 			array(
-				'title'       => '',
-				'description' => '<p>' . sprintf(
-						esc_html__( 'MailChimp makes it easy to send email newsletters to your customers, manage your subscriber lists, and track campaign performance. Use Gravity Forms to collect customer information and automatically add them to your MailChimp subscriber list. If you don\'t have a MailChimp account, you can %1$s sign up for one here.%2$s', 'gravityformsmailchimp' ),
+				'description' => '<p>' .
+					sprintf(
+						esc_html__( 'MailChimp makes it easy to send email newsletters to your customers, manage your subscriber lists, and track campaign performance. Use Gravity Forms to collect customer information and automatically add it to your MailChimp subscriber list. If you don\'t have a MailChimp account, you can %1$s sign up for one here.%2$s', 'gravityformsmailchimp' ),
 						'<a href="http://www.mailchimp.com/" target="_blank">', '</a>'
-					) . '</p>',
+					)
+					. '</p>',
 				'fields'      => array(
 					array(
 						'name'              => 'apiKey',
 						'label'             => esc_html__( 'MailChimp API Key', 'gravityformsmailchimp' ),
 						'type'              => 'text',
 						'class'             => 'medium',
-						'feedback_callback' => array( $this, 'is_valid_api_key' )
+						'feedback_callback' => array( $this, 'initialize_api' ),
 					),
-				)
+				),
 			),
 		);
-	}
-
-	/**
-	 * Ensure the group setting keys are not lost when the settings are saved. Clear the cached settings if no feeds exist so the new format keys will be used.
-	 *
-	 * @return array The post data containing the updated settings.
-	 */
-	public function get_posted_settings() {
-		$post_data = parent::get_posted_settings();
-
-		if ( $this->is_plugin_settings( $this->_slug ) && $this->is_save_postback() && ! empty( $post_data ) ) {
-			$feed_count = $this->count_feeds();
-
-			if ( $feed_count > 0 ) {
-				$settings           = $this->get_previous_settings();
-				$settings['apiKey'] = rgar( $post_data, 'apiKey' );
-
-				return $settings;
-			} else {
-				GFCache::delete( 'mailchimp_plugin_settings' );
-			}
-
-		}
-
-		return $post_data;
-	}
-
-	/**
-	 * Count how many MailChimp feeds exist.
-	 *
-	 * @return int
-	 */
-	public function count_feeds() {
-		global $wpdb;
-
-		$sql = $wpdb->prepare( "SELECT count(*) FROM {$wpdb->prefix}gf_addon_feed WHERE addon_slug=%s", $this->_slug );
-
-		return $wpdb->get_var( $sql );
-	}
-
-	// ------- Feed list page -------
-
-	/**
-	 * Prevent feeds being listed or created if the api key isn't valid.
-	 *
-	 * @return bool
-	 */
-	public function can_create_feed() {
-
-		$settings = $this->get_plugin_settings();
-
-		return $this->is_valid_api_key( rgar( $settings, 'apiKey' ) );
-	}
-
-	/**
-	 * If the api key is invalid or empty return the appropriate message.
-	 *
-	 * @return string
-	 */
-	public function configure_addon_message() {
-
-		$settings_label = sprintf( esc_html__( '%s Settings', 'gravityforms' ), $this->get_short_title() );
-		$settings_link  = sprintf( '<a href="%s">%s</a>', esc_url( $this->get_plugin_settings_url() ), $settings_label );
-
-		$settings = $this->get_plugin_settings();
-
-		if ( rgempty( 'apiKey', $settings ) ) {
-
-			return sprintf( esc_html__( 'To get started, please configure your %s.', 'gravityforms' ), $settings_link );
-		}
-
-		return sprintf( esc_html__( 'We are unable to login to MailChimp with the provided API key. Please make sure you have entered a valid API key on the %s page.', 'gravityformsmailchimp' ), $settings_link );
 
 	}
 
-	/**
-	 * Display a warning message instead of the feeds if the API key isn't valid.
-	 *
-	 * @param array $form The form currently being edited.
-	 * @param integer $feed_id The current feed ID.
-	 */
-	public function feed_edit_page( $form, $feed_id ) {
 
-		if ( ! $this->can_create_feed() ) {
 
-			echo '<h3><span>' . $this->feed_settings_title() . '</span></h3>';
-			echo '<div>' . $this->configure_addon_message() . '</div>';
 
-			return;
-		}
 
-		parent::feed_edit_page( $form, $feed_id );
-	}
-
-	/**
-	 * Configures which columns should be displayed on the feed list page.
-	 *
-	 * @return array
-	 */
-	public function feed_list_columns() {
-		return array(
-			'feedName'            => esc_html__( 'Name', 'gravityformsmailchimp' ),
-			'mailchimp_list_name' => esc_html__( 'MailChimp List', 'gravityformsmailchimp' )
-		);
-	}
-
-	/**
-	 * Returns the value to be displayed in the MailChimp List column.
-	 *
-	 * @param array $feed The feed being included in the feed list.
-	 *
-	 * @return string
-	 */
-	public function get_column_value_mailchimp_list_name( $feed ) {
-		return $this->get_list_name( $feed['meta']['mailchimpList'] );
-	}
+	// # FEED SETTINGS -------------------------------------------------------------------------------------------------
 
 	/**
 	 * Configures the settings which should be rendered on the feed edit page.
 	 *
-	 * @return array The feed settings.
+	 * @since  3.0
+	 * @access public
+	 *
+	 * @return array
 	 */
 	public function feed_settings_fields() {
+
 		return array(
 			array(
-				'title'       => esc_html__( 'MailChimp Feed Settings', 'gravityformsmailchimp' ),
-				'description' => '',
-				'fields'      => array(
+				'title'  => esc_html__( 'MailChimp Feed Settings', 'gravityformsmailchimp' ),
+				'fields' => array(
 					array(
 						'name'     => 'feedName',
 						'label'    => esc_html__( 'Name', 'gravityformsmailchimp' ),
 						'type'     => 'text',
 						'required' => true,
 						'class'    => 'medium',
-						'tooltip'  => '<h6>' . esc_html__( 'Name', 'gravityformsmailchimp' ) . '</h6>' . esc_html__( 'Enter a feed name to uniquely identify this setup.', 'gravityformsmailchimp' )
+						'tooltip'  => sprintf(
+							'<h6>%s</h6>%s',
+							esc_html__( 'Name', 'gravityformsmailchimp' ),
+							esc_html__( 'Enter a feed name to uniquely identify this setup.', 'gravityformsmailchimp' )
+						),
 					),
 					array(
 						'name'     => 'mailchimpList',
 						'label'    => esc_html__( 'MailChimp List', 'gravityformsmailchimp' ),
 						'type'     => 'mailchimp_list',
 						'required' => true,
-						'tooltip'  => '<h6>' . esc_html__( 'MailChimp List', 'gravityformsmailchimp' ) . '</h6>' . esc_html__( 'Select the MailChimp list you would like to add your contacts to.', 'gravityformsmailchimp' ),
+						'tooltip'  => sprintf(
+							'<h6>%s</h6>%s',
+							esc_html__( 'MailChimp List', 'gravityformsmailchimp' ),
+							esc_html__( 'Select the MailChimp list you would like to add your contacts to.', 'gravityformsmailchimp' )
+						),
 					),
-				)
+				),
 			),
 			array(
-				'title'       => '',
-				'description' => '',
-				'dependency'  => 'mailchimpList',
-				'fields'      => array(
+				'dependency' => 'mailchimpList',
+				'fields'     => array(
 					array(
 						'name'      => 'mappedFields',
 						'label'     => esc_html__( 'Map Fields', 'gravityformsmailchimp' ),
 						'type'      => 'field_map',
 						'field_map' => $this->merge_vars_field_map(),
-						'tooltip'   => '<h6>' . esc_html__( 'Map Fields', 'gravityformsmailchimp' ) . '</h6>' . esc_html__( 'Associate your MailChimp merge variables to the appropriate Gravity Form fields by selecting.', 'gravityformsmailchimp' ),
+						'tooltip'   => sprintf(
+							'<h6>%s</h6>%s',
+							esc_html__( 'Map Fields', 'gravityformsmailchimp' ),
+							esc_html__( 'Associate your MailChimp merge variables to the appropriate Gravity Form fields by selecting the appropriate form field from the list.', 'gravityformsmailchimp' )
+						),
 					),
 					array(
-						'name'       => 'groups',
+						'name'       => 'interestCategories',
 						'label'      => esc_html__( 'Groups', 'gravityformsmailchimp' ),
-						'dependency' => array( $this, 'has_mailchimp_groups' ),
-						'type'       => 'mailchimp_groups',
-						'tooltip'    => '<h6>' . esc_html__( 'Groups', 'gravityformsmailchimp' ) . '</h6>' . esc_html__( 'When one or more groups are enabled, users will be assigned to the groups in addition to being subscribed to the MailChimp list. When disabled, users will not be assigned to groups.', 'gravityformsmailchimp' ),
+						'dependency' => array( $this, 'has_interest_categories' ),
+						'type'       => 'interest_categories',
+						'tooltip'    => sprintf(
+							'<h6>%s</h6>%s',
+							esc_html__( 'Groups', 'gravityformsmailchimp' ),
+							esc_html__( 'When one or more groups are enabled, users will be assigned to the groups in addition to being subscribed to the MailChimp list. When disabled, users will not be assigned to groups.', 'gravityformsmailchimp' )
+						),
 					),
 					array(
 						'name'    => 'optinCondition',
 						'label'   => esc_html__( 'Conditional Logic', 'gravityformsmailchimp' ),
 						'type'    => 'feed_condition',
-						'tooltip' => '<h6>' . esc_html__( 'Conditional Logic', 'gravityformsmailchimp' ) . '</h6>' . esc_html__( 'When conditional logic is enabled, form submissions will only be exported to MailChimp when the conditions are met. When disabled all form submissions will be exported.', 'gravityformsmailchimp' ),
+						'tooltip' => sprintf(
+							'<h6>%s</h6>%s',
+							esc_html__( 'Conditional Logic', 'gravityformsmailchimp' ),
+							esc_html__( 'When conditional logic is enabled, form submissions will only be exported to MailChimp when the conditions are met. When disabled all form submissions will be exported.', 'gravityformsmailchimp' )
+						),
 					),
 					array(
 						'name'    => 'options',
@@ -587,225 +383,360 @@ class GFMailChimp extends GFFeedAddOn {
 								'name'          => 'double_optin',
 								'label'         => esc_html__( 'Double Opt-In', 'gravityformsmailchimp' ),
 								'default_value' => 1,
-								'tooltip'       => '<h6>' . esc_html__( 'Double Opt-In', 'gravityformsmailchimp' ) . '</h6>' . esc_html__( 'When the double opt-in option is enabled, MailChimp will send a confirmation email to the user and will only add them to your MailChimp list upon confirmation.', 'gravityformsmailchimp' ),
 								'onclick'       => 'if(this.checked){jQuery("#mailchimp_doubleoptin_warning").hide();} else{jQuery("#mailchimp_doubleoptin_warning").show();}',
+								'tooltip'       => sprintf(
+									'<h6>%s</h6>%s',
+									esc_html__( 'Double Opt-In', 'gravityformsmailchimp' ),
+									esc_html__( 'When the double opt-in option is enabled, MailChimp will send a confirmation email to the user and will only add them to your MailChimp list upon confirmation.', 'gravityformsmailchimp' )
+								),
 							),
 							array(
-								'name'    => 'sendWelcomeEmail',
-								'label'   => esc_html__( 'Send Welcome Email', 'gravityformsmailchimp' ),
-								'tooltip' => '<h6>' . esc_html__( 'Send Welcome Email', 'gravityformsmailchimp' ) . '</h6>' . esc_html__( 'When this option is enabled, users will receive an automatic welcome email from MailChimp upon being added to your MailChimp list.', 'gravityformsmailchimp' ),
+								'name'  => 'markAsVIP',
+								'label' => esc_html__( 'Mark subscriber as VIP', 'gravityformsmailchimp' ),
 							),
-						)
+						),
 					),
 					array( 'type' => 'save' ),
-				)
+				),
 			),
 		);
+
 	}
 
 	/**
 	 * Define the markup for the mailchimp_list type field.
 	 *
-	 * @param array $field The field properties.
-	 * @param bool|true $echo Should the setting markup be echoed.
+	 * @since  3.0
+	 * @access public
 	 *
-	 * @return string|void
+	 * @param array $field The field properties.
+	 * @param bool  $echo  Should the setting markup be echoed. Defaults to true.
+	 *
+	 * @return string
 	 */
 	public function settings_mailchimp_list( $field, $echo = true ) {
 
-		$api  = $this->get_api();
+		// Initialize HTML string.
 		$html = '';
 
-		// getting all contact lists
-		$this->log_debug( __METHOD__ . '(): Retrieving contact lists.' );
+		// If API is not initialized, return.
+		if ( ! $this->initialize_api() ) {
+			return $html;
+		}
+
+		// Prepare list request parameters.
+		$params = array( 'start' => 0, 'limit' => 100 );
+
+		// Filter parameters.
+		$params = apply_filters( 'gform_mailchimp_lists_params', $params );
+
+		// Convert start parameter to 3.0.
+		if ( isset( $params['start'] ) ) {
+			$params['offset'] = $params['start'];
+			unset( $params['start'] );
+		}
+
+		// Convert limit parameter to 3.0.
+		if ( isset( $params['limit'] ) ) {
+			$params['count'] = $params['limit'];
+			unset( $params['limit'] );
+		}
+
 		try {
-			$params = array(
-				'start' => 0,
-				'limit' => 100,
-			);
 
-			$params = apply_filters( 'gform_mailchimp_lists_params', $params );
+			// Log contact lists request parameters.
+			$this->log_debug( __METHOD__ . '(): Retrieving contact lists; params: ' . print_r( $params, true ) );
 
-			$lists = $api->call( 'lists/list', $params );
+			// Get lists.
+			$lists = $this->api->get_lists( $params );
+
 		} catch ( Exception $e ) {
-			$this->log_error( __METHOD__ . '(): Could not load MailChimp contact lists. Error ' . $e->getCode() . ' - ' . $e->getMessage() );
-		}
 
-		if ( empty( $lists ) ) {
+			// Log that contact lists could not be obtained.
+			$this->log_error( __METHOD__ . '(): Could not retrieve MailChimp contact lists; ' . $e->getMessage() );
+
+			// Display error message.
 			printf( esc_html__( 'Could not load MailChimp contact lists. %sError: %s', 'gravityformsmailchimp' ), '<br/>', $e->getMessage() );
-		} elseif ( empty( $lists['data'] ) ) {
-			if ( $lists['total'] == 0 ) {
-				//no lists found
-				printf( esc_html__( 'Could not load MailChimp contact lists. %sError: %s', 'gravityformsmailchimp' ), '<br/>', esc_html__( 'No lists found.', 'gravityformsmailchimp' ) );
-				$this->log_error( __METHOD__ . '(): Could not load MailChimp contact lists. Error ' . 'No lists found.' );
-			} else {
-				printf( esc_html__( 'Could not load MailChimp contact lists. %sError: %s', 'gravityformsmailchimp' ), '<br/>', rgar( $lists['errors'][0], 'error' ) );
-				$this->log_error( __METHOD__ . '(): Could not load MailChimp contact lists. Error ' . rgar( $lists['errors'][0], 'error' ) );
-			}
-		} else {
-			if ( isset( $lists['data'] ) && isset( $lists['total'] ) ) {
-				$lists = $lists['data'];
-				$this->log_debug( __METHOD__ . '(): Number of lists: ' . count( $lists ) );
-			}
 
-			$options = array(
-				array(
-					'label' => esc_html__( 'Select a MailChimp List', 'gravityformsmailchimp' ),
-					'value' => ''
-				)
-			);
-			foreach ( $lists as $list ) {
-				$options[] = array(
-					'label' => esc_html( $list['name'] ),
-					'value' => esc_attr( $list['id'] )
-				);
-			}
+			return;
 
-			$field['type']     = 'select';
-			$field['choices']  = $options;
-			$field['onchange'] = 'jQuery(this).parents("form").submit();';
-
-			$html = $this->settings_select( $field, false );
 		}
+
+		// If no lists were found, display error message.
+		if ( 0 === $lists['total_items'] ) {
+
+			// Log that no lists were found.
+			$this->log_error( __METHOD__ . '(): Could not load MailChimp contact lists; no lists found.' );
+
+			// Display error message.
+			printf( esc_html__( 'Could not load MailChimp contact lists. %sError: %s', 'gravityformsmailchimp' ), '<br/>', esc_html__( 'No lists found.', 'gravityformsmailchimp' ) );
+
+			return;
+
+		}
+
+		// Log number of lists retrieved.
+		$this->log_debug( __METHOD__ . '(): Number of lists: ' . count( $lists['lists'] ) );
+
+		// Initialize select options.
+		$options = array(
+			array(
+				'label' => esc_html__( 'Select a MailChimp List', 'gravityformsmailchimp' ),
+				'value' => '',
+			),
+		);
+
+		// Loop through MailChimp lists.
+		foreach ( $lists['lists'] as $list ) {
+
+			// Add list to select options.
+			$options[] = array(
+				'label' => esc_html( $list['name'] ),
+				'value' => esc_attr( $list['id'] ),
+			);
+
+		}
+
+		// Add select field properties.
+		$field['type']     = 'select';
+		$field['choices']  = $options;
+		$field['onchange'] = 'jQuery(this).parents("form").submit();';
+
+		// Generate select field.
+		$html = $this->settings_select( $field, false );
 
 		if ( $echo ) {
 			echo $html;
 		}
 
 		return $html;
+
 	}
 
 	/**
 	 * Return an array of MailChimp list fields which can be mapped to the Form fields/entry meta.
 	 *
+	 * @since  3.0
+	 * @access public
+	 *
 	 * @return array
 	 */
 	public function merge_vars_field_map() {
 
-		$api       = $this->get_api();
-		$list_id   = $this->get_setting( 'mailchimpList' );
-		$field_map = array();
+		// Initialize field map array.
+		$field_map = array(
+			'EMAIL' => array(
+				'name'       => 'EMAIL',
+				'label'      => esc_html__( 'Email Address', 'gravityformsmailchimp' ),
+				'required'   => true,
+				'field_type' => array( 'email', 'hidden' ),
+			),
+		);
 
-		if ( ! empty( $list_id ) ) {
-			try {
-				$params = array(
-					'id' => array( $list_id ),
+		// If unable to initialize API, return field map.
+		if ( ! $this->initialize_api() ) {
+			return $field_map;
+		}
+
+		// Get current list ID.
+		$list_id = $this->get_setting( 'mailchimpList' );
+
+		try {
+
+			// Get merge fields.
+			$merge_fields = $this->api->get_list_merge_fields( $list_id );
+
+		} catch ( Exception $e ) {
+
+			// Log error.
+			$this->log_error( __METHOD__ . '(): Unable to get merge fields for MailChimp list; ' . $e->getMessage() );
+
+			return $field_map;
+
+		}
+
+		// If merge fields exist, add to field map.
+		if ( ! empty( $merge_fields['merge_fields'] ) ) {
+
+			// Loop through merge fields.
+			foreach ( $merge_fields['merge_fields'] as $merge_field ) {
+
+				// Add to field map.
+				$field_map[ $merge_field['tag'] ] = array(
+					'name'       => $merge_field['tag'],
+					'label'      => $merge_field['name'],
+					'required'   => $merge_field['required'],
+					'field_type' => strtoupper( $merge_field['tag'] ) === 'EMAIL' ? array( 'email', 'hidden' ) : '',
 				);
 
-				$lists = $api->call( 'lists/merge-vars', $params );
-			} catch ( Exception $e ) {
-				$this->log_error( __METHOD__ . '(): ' . $e->getCode() . ' - ' . $e->getMessage() );
-
-				return $field_map;
 			}
 
-			if ( empty( $lists['data'] ) ) {
-				$this->log_error( __METHOD__ . '(): Unable to retrieve list due to ' . $lists['errors'][0]['code'] . ' - ' . $lists['errors'][0]['error'] );
-
-				return $field_map;
-			}
-			$list       = $lists['data'][0];
-			$merge_vars = $list['merge_vars'];
-
-			foreach ( $merge_vars as $merge_var ) {
-				$field_map[] = array(
-					'name'       => $merge_var['tag'],
-					'label'      => $merge_var['name'],
-					'required'   => $merge_var['req'],
-					'field_type' => $merge_var['tag'] == 'EMAIL' ? array( 'email', 'hidden' ) : '',
-				);
-			}
 		}
 
 		return $field_map;
 	}
 
 	/**
-	 * Does the list have any groups configured?
+	 * Prevent feeds being listed or created if the API key isn't valid.
+	 *
+	 * @since  3.0
+	 * @access public
 	 *
 	 * @return bool
 	 */
-	public function has_mailchimp_groups() {
-		$groupings = $this->get_mailchimp_groups();
+	public function can_create_feed() {
 
-		return ! empty( $groupings );
+		return $this->initialize_api();
+
 	}
 
 	/**
-	 * Define the markup for the mailchimp_groups type field.
+	 * Configures which columns should be displayed on the feed list page.
 	 *
-	 * @param array $field The field properties.
-	 * @param bool|true $echo Should the setting markup be echoed.
+	 * @since  3.0
+	 * @access public
 	 *
-	 * @return string|void
+	 * @return array
 	 */
-	public function settings_mailchimp_groups( $field, $echo = true ) {
+	public function feed_list_columns() {
 
-		$groupings = $this->get_mailchimp_groups();
-		if ( empty( $groupings ) ) {
-			$this->log_debug( __METHOD__ . '(): No groups found.' );
-
-			return;
-		}
-
-		$str = "
-		<style>
-			.gaddon-mailchimp-groupname {font-weight: bold;}
-			.gaddon-setting-checkbox {margin: 5px 0 0 0;}
-			.gaddon-mailchimp-group .gf_animate_sub_settings {padding-left: 10px;}
-		</style>
-
-		<div id='gaddon-mailchimp_groups'>";
-
-		foreach ( $groupings as $grouping ) {
-
-			$grouping_label = $grouping['name'];
-
-			$str .= "<div class='gaddon-mailchimp-group'>
-						<div class='gaddon-mailchimp-groupname'>" . esc_attr( $grouping_label ) . "</div><div class='gf_animate_sub_settings'>";
-
-			foreach ( $grouping['groups'] as $group ) {
-				$setting_key_root   = $this->get_group_setting_key( $grouping['id'], $group['name'] );
-				$choice_key_enabled = "{$setting_key_root}_enabled";
-
-
-				$str .= $this->settings_checkbox(
-					array(
-						'name'    => $group['name'],
-						'type'    => 'checkbox',
-						'choices' => array(
-							array(
-								'name'  => $choice_key_enabled,
-								'label' => $group['name'],
-							),
-						),
-						'onclick' => "if(this.checked){jQuery('#{$setting_key_root}_condition_container').slideDown();} else{jQuery('#{$setting_key_root}_condition_container').slideUp();}",
-					), false
-				);
-
-				$str .= $this->group_condition( $setting_key_root );
-
-			}
-			$str .= '</div></div>';
-		}
-		$str .= '</div>';
-
-		if ( $echo ) {
-			echo $str;
-		}
-
-		return $str;
+		return array(
+			'feedName'            => esc_html__( 'Name', 'gravityformsmailchimp' ),
+			'mailchimp_list_name' => esc_html__( 'MailChimp List', 'gravityformsmailchimp' ),
+		);
 
 	}
 
 	/**
-	 * Define the markup for the group conditional logic.
+	 * Returns the value to be displayed in the MailChimp List column.
 	 *
-	 * @param string $setting_name_root The group setting key.
+	 * @since  3.0
+	 * @access public
+	 *
+	 * @param array $feed The feed being included in the feed list.
 	 *
 	 * @return string
 	 */
-	public function group_condition( $setting_name_root ) {
+	public function get_column_value_mailchimp_list_name( $feed ) {
+
+		// If unable to initialize API, return the list ID.
+		if ( ! $this->initialize_api() ) {
+			return rgars( $feed, 'meta/mailchimpList' );
+		}
+
+		try {
+
+			// Get list.
+			$list = $this->api->get_list( rgars( $feed, 'meta/mailchimpList' ) );
+
+			// Return list name.
+			return rgar( $list, 'name' );
+
+		} catch ( Exception $e ) {
+
+			// Log error.
+			$this->log_error( __METHOD__ . '(): Unable to get MailChimp list for feed list; ' . $e->getMessage() );
+
+			// Return list ID.
+			return rgars( $feed, 'meta/mailchimpList' );
+
+		}
+
+	}
+
+	/**
+	 * Define the markup for the interest categories type field.
+	 *
+	 * @since  4.0
+	 * @access public
+	 *
+	 * @param array $field The field properties.
+	 * @param bool  $echo  Should the setting markup be echoed.
+	 *
+	 * @return string|void
+	 */
+	public function settings_interest_categories( $field, $echo = true ) {
+
+		// Get interest categories.
+		$categories = $this->get_interest_categories();
+
+		// If no categories are found, return.
+		if ( empty( $categories ) ) {
+			$this->log_debug( __METHOD__ . '(): No categories found.' );
+			return;
+		}
+
+		// Start field markup.
+		$html = "<div id='gaddon-mailchimp_interest_categories'>";
+
+		// Loop through interest categories.
+		foreach ( $categories as $category ) {
+
+			// Open category container.
+			$html .= '<div class="gaddon-mailchimp-category">';
+
+			// Define label.
+			$label = rgar( $category, 'title' );
+
+			// Display category label.
+			$html .= '<div class="gaddon-mailchimp-categoryname">' . esc_html( $label ) . '</div><div class="gf_animate_sub_settings">';
+
+			// Get interests category interests.
+			$interests = $this->api->get_interest_category_interests( $category['list_id'], $category['id'] );
+
+			// Loop through interests.
+			foreach ( $interests as $interest ) {
+
+				// Define interest key.
+				$interest_key = 'interestCategory_' . $interest['id'];
+
+				// Define enabled checkbox key.
+				$enabled_key = $interest_key . '_enabled';
+
+				// Get interest checkbox markup.
+				$html .= $this->settings_checkbox(
+					array(
+						'name'    => esc_html( $interest['name'] ),
+						'type'    => 'checkbox',
+						'onclick' => "if(this.checked){jQuery('#{$interest_key}_condition_container').slideDown();} else{jQuery('#{$interest_key}_condition_container').slideUp();}",
+						'choices' => array(
+							array(
+								'name'  => $enabled_key,
+								'label' => esc_html( $interest['name'] ),
+							),
+						),
+					),
+					false
+				);
+
+				$html .= $this->interest_category_condition( $interest_key );
+
+			}
+
+			$html .= '</div></div>';
+		}
+
+		$html .= '</div>';
+
+		if ( $echo ) {
+			echo $html;
+		}
+
+		return $html;
+
+	}
+
+	/**
+	 * Define the markup for the interest category conditional logic.
+	 *
+	 * @since  4.0
+	 * @access public
+	 *
+	 * @param string $setting_name_root The category setting key.
+	 *
+	 * @return string
+	 */
+	public function interest_category_condition( $setting_name_root ) {
 
 		$condition_enabled_setting = "{$setting_name_root}_enabled";
 		$is_enabled                = $this->get_setting( $condition_enabled_setting ) == '1';
@@ -846,306 +777,707 @@ class GFMailChimp extends GFFeedAddOn {
 		        '</div>';
 
 		return $str;
+
 	}
 
 	/**
 	 * Define which field types can be used for the group conditional logic.
 	 *
+	 * @since  3.0
+	 * @access public
+	 *
+	 * @uses GFAddOn::get_current_form()
+	 * @uses GFCommon::get_label()
+	 * @uses GF_Field::get_entry_inputs()
+	 * @uses GF_Field::get_input_type()
+	 * @uses GF_Field::is_conditional_logic_supported()
+	 *
 	 * @return array
 	 */
 	public function get_conditional_logic_fields() {
-		$form   = $this->get_current_form();
+
+		// Initialize conditional logic fields array.
 		$fields = array();
+
+		// Get the current form.
+		$form = $this->get_current_form();
+
+		// Loop through the form fields.
 		foreach ( $form['fields'] as $field ) {
-			if ( $field->is_conditional_logic_supported() ) {
-				$fields[] = array( 'value' => $field->id, 'label' => GFCommon::get_label( $field ) );
+
+			// If this field does not support conditional logic, skip it.
+			if ( ! $field->is_conditional_logic_supported() ) {
+				continue;
 			}
+
+			// Get field inputs.
+			$inputs = $field->get_entry_inputs();
+
+			// If field has multiple inputs, add them as individual field options.
+			if ( $inputs && 'checkbox' !== $field->get_input_type() ) {
+
+				// Loop through the inputs.
+				foreach ( $inputs as $input ) {
+
+					// If this is a hidden input, skip it.
+					if ( rgar( $input, 'isHidden' ) ) {
+						continue;
+					}
+
+					// Add input to conditional logic fields array.
+					$fields[] = array(
+						'value' => $input['id'],
+						'label' => GFCommon::get_label( $field, $input['id'] ),
+					);
+
+				}
+
+			} else {
+
+				// Add field to conditional logic fields array.
+				$fields[] = array(
+					'value' => $field->id,
+					'label' => GFCommon::get_label( $field ),
+				);
+
+			}
+
 		}
 
 		return $fields;
+
 	}
 
 	/**
 	 * Define the markup for the double_optin checkbox input.
 	 *
-	 * @param array $choice The choice properties.
+	 * @since  3.0
+	 * @access public
+	 *
+	 * @param array  $choice     The choice properties.
 	 * @param string $attributes The attributes for the input tag.
-	 * @param string $value - Is choice selected? (1 if field has been checked. 0 or null otherwise)
-	 * @param string $tooltip - The tooltip for this checkbox item.
+	 * @param string $value      Is choice selected (1 if field has been checked. 0 or null otherwise).
+	 * @param string $tooltip    The tooltip for this checkbox item.
 	 *
 	 * @return string
 	 */
 	public function checkbox_input_double_optin( $choice, $attributes, $value, $tooltip ) {
+
+		// Get checkbox input markup.
 		$markup = $this->checkbox_input( $choice, $attributes, $value, $tooltip );
 
-		if ( $value ) {
-			$display = 'none';
-		} else {
-			$display = 'block-inline';
-		}
+		// Define visibility status of warning.
+		$display = $value ? 'none' : 'block-inline';
 
+		// Add warning to checkbox markup.
 		$markup .= '<span id="mailchimp_doubleoptin_warning" style="padding-left: 10px; font-size: 10px; display:' . $display . '">(' . esc_html__( 'Abusing this may cause your MailChimp account to be suspended.', 'gravityformsmailchimp' ) . ')</span>';
 
 		return $markup;
+
 	}
+
+
+
+
+
+	// # FEED PROCESSING -----------------------------------------------------------------------------------------------
+
+	/**
+	 * Process the feed, subscribe the user to the list.
+	 *
+	 * @since  3.0
+	 * @access public
+	 *
+	 * @param array $feed  The feed object to be processed.
+	 * @param array $entry The entry object currently being processed.
+	 * @param array $form  The form object currently being processed.
+	 *
+	 * @return array
+	 */
+	public function process_feed( $feed, $entry, $form ) {
+
+		// Log that we are processing feed.
+		$this->log_debug( __METHOD__ . '(): Processing feed.' );
+
+		// If unable to initialize API, log error and return.
+		if ( ! $this->initialize_api() ) {
+			$this->add_feed_error( esc_html__( 'Unable to process feed because API could not be initialized.', 'gravityformsmailchimp' ), $feed, $entry, $form );
+			return $entry;
+		}
+
+		// Set current merge variable name.
+		$this->merge_var_name = 'EMAIL';
+
+		// Get field map values.
+		$field_map = $this->get_field_map_fields( $feed, 'mappedFields' );
+
+		// Get mapped email address.
+		$email = $this->get_field_value( $form, $entry, $field_map['EMAIL'] );
+
+		// If email address is invalid, log error and return.
+		if ( GFCommon::is_invalid_or_empty_email( $email ) ) {
+			$this->add_feed_error( esc_html__( 'A valid Email address must be provided.', 'gravityformsmailchimp' ), $feed, $entry, $form );
+			return $entry;
+		}
+
+		// Set override empty fields flag.
+		$override_empty_fields = gf_apply_filters( 'gform_mailchimp_override_empty_fields', array( $form['id'] ), true, $form, $entry, $feed );
+
+		// Log that empty fields will not be overridden.
+		if ( ! $override_empty_fields ) {
+			$this->log_debug( __METHOD__ . '(): Empty fields will not be overridden.' );
+		}
+
+		// Initialize array to store merge vars.
+		$merge_vars = array();
+
+		// Loop through field map.
+		foreach ( $field_map as $name => $field_id ) {
+
+			// If this is the email field, skip it.
+			if ( strtoupper( $name ) === 'EMAIL' ) {
+				continue;
+			}
+
+			// Set merge var name to current field map name.
+			$this->merge_var_name = $name;
+
+			// Get field value.
+			$field_value = $this->get_field_value( $form, $entry, $field_id );
+
+			// If field value is empty and we are not overriding empty fields, skip it.
+			if ( empty( $field_value ) && ! $override_empty_fields ) {
+				continue;
+			}
+
+			$merge_vars[ $name ] = $field_value;
+
+		}
+
+		// Initialize interests array.
+		$interests = array();
+
+		// Get interest categories.
+		$categories = $this->get_feed_interest_categories( $feed );
+
+		// Loop through categories.
+		foreach ( $categories as $category_id => $category_meta ) {
+
+			// Log that we are evaluating the category conditions.
+			$this->log_debug( __METHOD__ . '(): Evaluating condition for interest category "' . $category_id . '": ' . print_r( $category_meta, true ) );
+
+			// Get condition evaluation.
+			$condition_evaluation = $this->is_category_condition_met( $category_meta, $form, $entry );
+
+			// Set interest category based on evaluation.
+			$interests[ $category_id ] = $condition_evaluation;
+
+		}
+
+		// Define initial member found and member status variables.
+		$member_found  = false;
+		$member_status = null;
+
+		try {
+
+			// Log that we are checking if user is already subscribed to list.
+			$this->log_debug( __METHOD__ . "(): Checking to see if $email is already on the list." );
+
+			// Get member info.
+			$member = $this->api->get_list_member( $feed['meta']['mailchimpList'], $email );
+
+			// Set member found status to true.
+			$member_found = true;
+
+			// Set member status.
+			$member_status = $member['status'];
+
+		} catch ( Exception $e ) {
+
+			// If the exception code is not 404, abort feed processing.
+			if ( 404 !== $e->getCode() ) {
+
+				// Log that we could not get the member information.
+				$this->add_feed_error( sprintf( esc_html__( 'Unable to check if email address is already a member: %s', 'gravityformsmailchimp' ), $e->getMessage() ), $feed, $entry, $form );
+
+				return $entry;
+
+			}
+
+		}
+
+		/**
+		 * Modify whether a user that currently has a status of unsubscribed on your list is resubscribed.
+		 * By default, the user is resubscribed.
+		 *
+		 * @param bool  $allow_resubscription If the user should be resubscribed.
+		 * @param array $form                 The form object.
+		 * @param array $entry                The entry object.
+		 * @param array $feed                 The feed object.
+		 */
+		$allow_resubscription = gf_apply_filters( array( 'gform_mailchimp_allow_resubscription', $form['id'] ), true, $form, $entry, $feed );
+
+		// If member is unsubscribed and resubscription is not allowed, exit.
+		if ( 'unsubscribed' == $member_status && ! $allow_resubscription ) {
+			$this->log_debug( __METHOD__ . '(): User is unsubscribed and resubscription is not allowed.' );
+			return;
+		}
+
+		// Prepare subscription arguments.
+		$subscription = array(
+			'id'           => $feed['meta']['mailchimpList'],
+			'email'        => array( 'email' => $email ),
+			'merge_vars'   => $merge_vars,
+			'interests'    => $interests,
+			'email_type'   => 'html',
+			'double_optin' => rgars( $feed, 'meta/double_optin' ) ? true : false,
+			'status'       => 'subscribed',
+			'ip_signup'    => rgar( $entry, 'ip' ),
+			'vip'          => rgars( $feed, 'meta/markAsVIP' ) ? true : false,
+		);
+
+		// Prepare transaction type for filter.
+		$transaction = $member_found ? 'Update' : 'Subscribe';
+
+		/**
+		 * Modify the subscription object before it is executed.
+		 *
+		 * @deprecated 4.0 @use gform_mailchimp_subscription
+		 *
+		 * @param array  $subscription Subscription arguments.
+		 * @param array  $form         The form object.
+		 * @param array  $entry        The entry object.
+		 * @param array  $feed         The feed object.
+		 * @param string $transaction  Transaction type. Defaults to Subscribe.
+		 */
+		$subscription = gf_apply_filters( array( 'gform_mailchimp_args_pre_subscribe', $form['id'] ), $subscription, $form, $entry, $feed, $transaction );
+
+		// Convert merge vars.
+		$subscription['merge_fields'] = $subscription['merge_vars'];
+		unset( $subscription['merge_vars'] );
+
+		// Convert double optin.
+		$subscription['status'] = $subscription['double_optin'] && ! $member_found ? 'pending' : 'subscribed';
+		unset( $subscription['double_optin'] );
+
+		// Extract list ID.
+		$list_id = $subscription['id'];
+		unset( $subscription['id'] );
+
+		// Convert email address.
+		$subscription['email_address'] = $subscription['email']['email'];
+		unset( $subscription['email'] );
+
+		/**
+		 * Modify the subscription object before it is executed.
+		 *
+		 * @param array  $subscription Subscription arguments.
+		 * @param string $list_id      MailChimp list ID.
+		 * @param array  $form         The form object.
+		 * @param array  $entry        The entry object.
+		 * @param array  $feed         The feed object.
+		 */
+		$subscription = gf_apply_filters( array( 'gform_mailchimp_subscription', $form['id'] ), $subscription, $list_id, $form, $entry, $feed );
+		
+		// Remove interests if none are defined.
+		if ( empty( $subscription['interests'] ) ) {
+			unset( $subscription['interests'] );
+		}
+
+		try {
+
+			// Log the subscriber to be added or updated.
+			$this->log_debug( __METHOD__ . '(): Subscriber to be added/updated: ' . print_r( $subscription, true ) );
+
+			// Add or update subscriber.
+			$this->api->update_list_member( $list_id, $subscription['email_address'], $subscription );
+
+			// Log that the subscription was added or updated.
+			$this->log_debug( __METHOD__ . '(): Subscriber successfully added/updated.' );
+
+		} catch ( Exception $e ) {
+
+			// Log that subscription could not be added or updated.
+			$this->add_feed_error( sprintf( esc_html__( 'Unable to add/update subscriber: %s', 'gravityformsmailchimp' ), $e->getMessage() ), $feed, $entry, $form );
+
+			return;
+
+		}
+
+	}
+
+	/**
+	 * Returns the value of the selected field.
+	 *
+	 * @since  3.0
+	 * @access public
+	 *
+	 * @param array  $form     The form object currently being processed.
+	 * @param array  $entry    The entry object currently being processed.
+	 * @param string $field_id The ID of the field being processed.
+	 *
+	 * @uses GFAddOn::get_full_name()
+	 * @uses GF_Field::get_value_export()
+	 * @uses GFFormsModel::get_field()
+	 * @uses GFFormsModel::get_input_type()
+	 * @uses GFMailChimp::get_full_address()
+	 * @uses GFMailChimp::maybe_override_field_value()
+	 *
+	 * @return array
+	 */
+	public function get_field_value( $form, $entry, $field_id ) {
+
+		// Set initial field value.
+		$field_value = '';
+
+		// Set field value based on field ID.
+		switch ( strtolower( $field_id ) ) {
+
+			// Form title.
+			case 'form_title':
+				$field_value = rgar( $form, 'title' );
+				break;
+
+			// Entry creation date.
+			case 'date_created':
+
+				// Get entry creation date from entry.
+				$date_created = rgar( $entry, strtolower( $field_id ) );
+
+				// If date is not populated, get current date.
+				$field_value = empty( $date_created ) ? gmdate( 'Y-m-d H:i:s' ) : $date_created;
+				break;
+
+			// Entry IP and source URL.
+			case 'ip':
+			case 'source_url':
+				$field_value = rgar( $entry, strtolower( $field_id ) );
+				break;
+
+			default:
+
+				// Get field object.
+				$field = GFFormsModel::get_field( $form, $field_id );
+
+				if ( is_object( $field ) ) {
+
+					// Check if field ID is integer to ensure field does not have child inputs.
+					$is_integer = $field_id == intval( $field_id );
+
+					// Get field input type.
+					$input_type = GFFormsModel::get_input_type( $field );
+
+					if ( $is_integer && 'address' === $input_type ) {
+
+						// Get full address for field value.
+						$field_value = $this->get_full_address( $entry, $field_id );
+
+					} else if ( $is_integer && 'name' === $input_type ) {
+
+						// Get full name for field value.
+						$field_value = $this->get_full_name( $entry, $field_id );
+
+					} else if ( $is_integer && 'checkbox' === $input_type ) {
+
+						// Initialize selected options array.
+						$selected = array();
+
+						// Loop through checkbox inputs.
+						foreach ( $field->inputs as $input ) {
+							$index = (string) $input['id'];
+							if ( ! rgempty( $index, $entry ) ) {
+								$selected[] = $this->maybe_override_field_value( rgar( $entry, $index ), $form, $entry, $index );
+							}
+						}
+
+						// Convert selected options array to comma separated string.
+						$field_value = implode( ', ', $selected );
+
+					} else if ( 'phone' === $input_type && $field->phoneFormat == 'standard' ) {
+
+						// Get field value.
+						$field_value = rgar( $entry, $field_id );
+
+						// Reformat standard format phone to match MailChimp format.
+						// Format: NPA-NXX-LINE (404-555-1212) when US/CAN.
+						if ( ! empty( $field_value ) && preg_match( '/^\D?(\d{3})\D?\D?(\d{3})\D?(\d{4})$/', $field_value, $matches ) ) {
+							$field_value = sprintf( '%s-%s-%s', $matches[1], $matches[2], $matches[3] );
+						}
+
+					} else {
+
+						// Use export value if method exists for field.
+						if ( is_callable( array( 'GF_Field', 'get_value_export' ) ) ) {
+							$field_value = $field->get_value_export( $entry, $field_id );
+						} else {
+							$field_value = rgar( $entry, $field_id );
+						}
+
+					}
+
+				} else {
+
+					// Get field value from entry.
+					$field_value = rgar( $entry, $field_id );
+
+				}
+
+		}
+
+		return $this->maybe_override_field_value( $field_value, $form, $entry, $field_id );
+
+	}
+
+	/**
+	 * Use the legacy gform_mailchimp_field_value filter instead of the framework gform_SLUG_field_value filter.
+	 *
+	 * @since  3.0
+	 * @access public
+	 *
+	 * @param string $field_value The field value.
+	 * @param array  $form        The form object currently being processed.
+	 * @param array  $entry       The entry object currently being processed.
+	 * @param string $field_id    The ID of the field being processed.
+	 *
+	 * @return string
+	 */
+	public function maybe_override_field_value( $field_value, $form, $entry, $field_id ) {
+
+		return gf_apply_filters( 'gform_mailchimp_field_value', array( $form['id'], $field_id ), $field_value, $form['id'], $field_id, $entry, $this->merge_var_name );
+
+	}
+
+
+
 
 
 	// # HELPERS -------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Validate the API Key
+	 * Initializes MailChimp API if credentials are valid.
 	 *
-	 * @param string $apikey The MailChimp API key to be validated.
+	 * @since  4.0
+	 * @access public
+	 *
+	 * @param string $api_key MailChimp API key.
+	 *
+	 * @uses GFAddOn::get_plugin_setting()
+	 * @uses GFAddOn::log_debug()
+	 * @uses GFAddOn::log_error()
+	 * @uses GF_MailChimp_API::account_details()
 	 *
 	 * @return bool|null
 	 */
-	public function is_valid_api_key( $apikey ) {
-		if ( empty( $apikey ) ) {
-			return null;
-		}
+	public function initialize_api( $api_key = null ) {
 
-		if ( ! class_exists( 'Mailchimp' ) ) {
-			require_once( 'api/Mailchimp.php' );
-		}
-
-		$this->log_debug( __METHOD__ . "(): Validating login for API Info for key {$apikey}." );
-		$api = new Mailchimp( trim( $apikey ), null );
-		try {
-			$lists = $api->call( 'lists/list', '' );
-		} catch ( Exception $e ) {
-			$this->log_error( __METHOD__ . '(): ' . $e->getCode() . ' - ' . $e->getMessage() );
-		}
-
-		if ( empty( $lists ) ) {
-			$this->log_error( __METHOD__ . '(): Invalid API Key. Error ' . $e->getCode() . ' - ' . $e->getMessage() );
-
-			return false;
-		} else {
-			$this->log_debug( __METHOD__ . '(): API Key is valid.' );
-
+		// If API is alredy initialized, return true.
+		if ( ! is_null( $this->api ) ) {
 			return true;
 		}
-	}
 
-	/**
-	 * Validate the API Key and return an instance of MailChimp class.
-	 *
-	 * @return Mailchimp|null
-	 */
-	private function get_api() {
-
-		if ( self::$api ) {
-			return self::$api;
+		// Get the API key.
+		if ( rgblank( $api_key ) ) {
+			$api_key = $this->get_plugin_setting( 'apiKey' );
 		}
 
-		$settings = $this->get_plugin_settings();
-		$api      = null;
-
-		if ( ! empty( $settings['apiKey'] ) ) {
-			if ( ! class_exists( 'Mailchimp' ) ) {
-				require_once( 'api/Mailchimp.php' );
-			}
-
-			$apikey = $settings['apiKey'];
-			$this->log_debug( __METHOD__ . '(): Retrieving API Info for key ' . $apikey );
-
-			try {
-				$api = new Mailchimp( trim( $apikey ), null );
-			} catch ( Exception $e ) {
-				$this->log_error( __METHOD__ . '(): Failed to set up the API.' );
-				$this->log_error( __METHOD__ . '(): ' . $e->getCode() . ' - ' . $e->getMessage() );
-
-				return null;
-			}
-		} else {
-			$this->log_debug( __METHOD__ . '(): API credentials not set.' );
-
+		// If the API key is blank, do not run a validation check.
+		if ( rgblank( $api_key ) ) {
 			return null;
 		}
 
-		if ( ! is_object( $api ) ) {
-			$this->log_error( __METHOD__ . '(): Failed to set up the API.' );
+		// Log validation step.
+		$this->log_debug( __METHOD__ . '(): Validating API Info.' );
 
-			return null;
+		// Setup a new MailChimp object with the API credentials.
+		$mc = new GF_MailChimp_API( $api_key );
+
+		try {
+
+			// Retrieve account information.
+			$mc->account_details();
+
+			// Assign API library to class.
+			$this->api = $mc;
+
+			// Log that authentication test passed.
+			$this->log_debug( __METHOD__ . '(): MailChimp successfully authenticated.' );
+
+			return true;
+
+		} catch ( Exception $e ) {
+
+			// Log that authentication test failed.
+			$this->log_error( __METHOD__ . '(): Unable to authenticate with MailChimp; '. $e->getMessage() );
+
+			return false;
+
 		}
 
-		$this->log_debug( __METHOD__ . '(): Successful API response received.' );
-		self::$api = $api;
-
-		return self::$api;
-	}
-
-	/**
-	 * Get the name of the specified MailChimp list.
-	 *
-	 * @param string $list_id The MailChimp list ID.
-	 *
-	 * @return string
-	 */
-	private function get_list_name( $list_id ) {
-		global $_lists;
-		if ( ! isset( $_lists ) ) {
-			$api = $this->get_api();
-			if ( ! is_object( $api ) ) {
-				$this->log_error( __METHOD__ . '(): Failed to set up the API.' );
-
-				return '';
-			}
-			try {
-				$params = array(
-					'start' => 0,
-					'limit' => 100,
-				);
-				$_lists = $api->call( 'lists/list', $params );
-			} catch ( Exception $e ) {
-				$this->log_debug( __METHOD__ . '(): Could not load MailChimp contact lists. Error ' . $e->getCode() . ' - ' . $e->getMessage() );
-
-				return '';
-			}
-		}
-
-		$list_name_array = wp_filter_object_list( $_lists['data'], array( 'id' => $list_id ), 'and', 'name' );
-		if ( $list_name_array ) {
-			$list_names = array_values( $list_name_array );
-			$list_name  = $list_names[0];
-		} else {
-			$list_name = $list_id . ' (' . esc_html__( 'List not found in MailChimp', 'gravityformsmailchimp' ) . ')';
-		}
-
-		return $list_name;
-	}
-
-	/**
-	 * Retrieve the value of the mailchimpList setting.
-	 *
-	 * @return string
-	 */
-	public function get_current_mailchimp_list() {
-		return $this->get_setting( 'mailchimpList' );
 	}
 
 	/**
 	 * Retrieve the interest groups for the list.
 	 *
-	 * @param string|bool $mailchimp_list The MailChimp list ID.
+	 * @since  4.0
+	 * @access public
+	 *
+	 * @param string $list_id MailChimp list ID.
 	 *
 	 * @return array|bool
 	 */
-	private function get_mailchimp_groups( $mailchimp_list = false ) {
+	private function get_interest_categories( $list_id = null ) {
 
-		$this->log_debug( __METHOD__ . '(): Retrieving groups.' );
-		$api = $this->get_api();
-
-		if ( ! $mailchimp_list ) {
-			$mailchimp_list = $this->get_current_mailchimp_list();
+		// If API is not initialized, return false.
+		if ( ! $this->initialize_api() ) {
+			return false;
 		}
 
-		if ( ! $mailchimp_list ) {
-			$this->log_error( __METHOD__ . '(): Could not find mailchimp list.' );
+		// Get MailChimp list ID.
+		if ( rgblank( $list_id ) ) {
+			$list_id = $this->get_setting( 'mailchimpList' );
+		}
+
+		// If MailChimp list ID is not defined, return.
+		if ( rgblank( $list_id ) ) {
+
+			// Log that list ID was not defined.
+			$this->log_error( __METHOD__ . '(): Could not get MailChimp interest categories because list ID was not defined.' );
 
 			return false;
+
 		}
 
 		try {
-			$params = array( 'id' => $mailchimp_list );
-			if ( empty( $api ) ) {
-				$groups = array();
-			} else {
-				$groups = $api->call( 'lists/interest-groupings', $params );
-			}
+
+			// Get groups.
+			$categories = $this->api->get_list_interest_categories( $list_id );
+
 		} catch ( Exception $e ) {
-			$this->log_error( __METHOD__ . '(): ' . $e->getCode() . ' - ' . $e->getMessage() );
-			$groups = array();
+
+			// Log error.
+			$this->log_error( __METHOD__ . '(): Unable to get interest categories for list "' . $list_id . '"; ' . $e->getMessage() );
+
+			return array();
+
 		}
 
-		if ( rgar( $groups, 'status' ) == 'error' ) {
-			$this->log_error( __METHOD__ . '(): ' . print_r( $groups, 1 ) );
-			$groups = array();
-		}
+		return $categories;
 
-		return $groups;
 	}
 
 	/**
-	 * Retrieve the settings for the specified group.
+	 * Determines if MailChimp list has any defined interest categories.
 	 *
-	 * @param array $group The group properties.
-	 * @param string $grouping_id The group ID.
-	 * @param array $feed The current feed.
-	 *
-	 * @return array
-	 */
-	private function get_group_settings( $group, $grouping_id, $feed ) {
-
-		$prefix = $this->get_group_setting_key( $grouping_id, $group['name'] ) . '_';
-		$props  = array( 'enabled', 'decision', 'field_id', 'operator', 'value' );
-
-		$settings = array();
-		foreach ( $props as $prop ) {
-			$settings[ $prop ] = rgar( $feed['meta'], "{$prefix}{$prop}" );
-		}
-
-		return $settings;
-	}
-
-	/**
-	 * Retrieve the group setting key.
-	 *
-	 * @param string $grouping_id The group ID.
-	 * @param string $group_name The group name.
-	 *
-	 * @return string
-	 */
-	public function get_group_setting_key( $grouping_id, $group_name ) {
-
-		$plugin_settings = GFCache::get( 'mailchimp_plugin_settings' );
-		if ( empty( $plugin_settings ) ) {
-			$plugin_settings = $this->get_plugin_settings();
-			GFCache::set( 'mailchimp_plugin_settings', $plugin_settings );
-		}
-
-		$key = 'group_key_' . $grouping_id . '_' . str_replace( '%', '', sanitize_title_with_dashes( $group_name ) );
-
-		if ( ! isset( $plugin_settings[ $key ] ) ) {
-			$group_key               = sanitize_key( uniqid( 'mc_group_', true ) );
-			$plugin_settings[ $key ] = $group_key;
-			$this->update_plugin_settings( $plugin_settings );
-			GFCache::set( 'mailchimp_plugin_settings', $plugin_settings );
-		}
-
-		return $plugin_settings[ $key ];
-	}
-
-	/**
-	 * Determine if the user should be subscribed to the group.
-	 *
-	 * @param array $group The group properties.
-	 * @param array $form The form currently being processed.
-	 * @param array $entry The entry currently being processed.
+	 * @since  4.0
+	 * @access public
 	 *
 	 * @return bool
 	 */
-	public function is_group_condition_met( $group, $form, $entry ) {
-		if ( ! $group['enabled'] ) {
-			$this->log_debug( __METHOD__ . '(): Group not enabled. Returning false.' );
+	public function has_interest_categories() {
 
-			return false;
-		} elseif ( $group['decision'] == 'always' ) {
-			$this->log_debug( __METHOD__ . '(): Group decision is always. Returning true.' );
+		// Get interest categories.
+		$categories = $this->get_interest_categories();
 
-			return true;
+		return ! empty( $categories );
+
+	}
+
+	/**
+	 * Retrieve the enabled interest categories for a feed.
+	 *
+	 * @since  4.0
+	 * @access public
+	 *
+	 * @param array $feed    The feed object.
+	 * @param bool  $enabled Return only enabled categories. Defaults to true.
+	 *
+	 * @return array
+	 */
+	public function get_feed_interest_categories( $feed, $enabled = true ) {
+
+		// Initialize categories array.
+		$categories = array();
+
+		// Loop through feed meta.
+		foreach ( $feed['meta'] as $key => $value ) {
+
+			// If this is not an interest category, skip it.
+			if ( 0 !== strpos( $key, 'interestCategory_' ) ) {
+				continue;
+			}
+
+			// Explode the meta key.
+			$key = explode( '_', $key );
+
+			// Add value to categories array.
+			$categories[ $key[1] ][ $key[2] ] = $value;
+
 		}
 
-		$field = RGFormsModel::get_field( $form, $group['field_id'] );
+		// If we are only returning enabled categories, remove disabled categories.
+		if ( $enabled ) {
+
+			// Loop through categories.
+			foreach ( $categories as $category_id => $category_meta ) {
+
+				// If category is enabled, skip it.
+				if ( '1' == $category_meta['enabled'] ) {
+					continue;
+				}
+
+				// Remove category.
+				unset( $categories[ $category_id ] );
+
+			}
+
+		}
+
+		return $categories;
+
+	}
+
+	/**
+	 * Determine if the user should be subscribed to the interest category.
+	 *
+	 * @since  4.0
+	 * @access public
+	 *
+	 * @param array $category The interest category properties.
+	 * @param array $form     The form currently being processed.
+	 * @param array $entry    The entry currently being processed.
+	 *
+	 * @uses GFFormsModel::get_field()
+	 * @uses GFFormsModel::is_value_match()
+	 * @uses GFMailChimp::get_field_value()
+	 *
+	 * @return bool
+	 */
+	public function is_category_condition_met( $category, $form, $entry ) {
+
+		if ( ! $category['enabled'] ) {
+
+			$this->log_debug( __METHOD__ . '(): Interest category not enabled. Returning false.' );
+			return false;
+
+		} elseif ( $category['decision'] == 'always' ) {
+
+			$this->log_debug( __METHOD__ . '(): Interest category decision is always. Returning true.' );
+			return true;
+
+		}
+
+		$field = GFFormsModel::get_field( $form, $category['field'] );
 
 		if ( ! is_object( $field ) ) {
-			$this->log_debug( __METHOD__ . "(): Field #{$group['field_id']} not found. Returning true." );
 
+			$this->log_debug( __METHOD__ . "(): Field #{$category['field']} not found. Returning true." );
 			return true;
+
 		} else {
-			$field_value    = RGFormsModel::get_lead_field_value( $entry, $field );
-			$is_value_match = RGFormsModel::is_value_match( $field_value, $group['value'], $group['operator'], $field );
-			$this->log_debug( __METHOD__ . "(): Add to group if field #{$group['field_id']} value {$group['operator']} '{$group['value']}'. Is value match? " . var_export( $is_value_match, 1 ) );
+
+			$field_value    = $this->get_field_value( $form, $entry, $category['field'] );
+			$is_value_match = GFFormsModel::is_value_match( $field_value, $category['value'], $category['operator'], $field );
+			$this->log_debug( __METHOD__ . "(): Add to interest category if field #{$category['field']} value {$category['operator']} '{$category['value']}'. Is value match? " . var_export( $is_value_match, 1 ) );
 
 			return $is_value_match;
 		}
@@ -1158,12 +1490,16 @@ class GFMailChimp extends GFFeedAddOn {
 	 * If other inputs are missing MailChimp will not store the field value, we will pass a hyphen when an input is empty.
 	 * MailChimp requires the inputs be delimited by 2 spaces.
 	 *
-	 * @param array $entry The entry currently being processed.
+	 * @since  3.0
+	 * @access public
+	 *
+	 * @param array  $entry    The entry currently being processed.
 	 * @param string $field_id The ID of the field to retrieve the value for.
 	 *
 	 * @return string
 	 */
 	public function get_full_address( $entry, $field_id ) {
+
 		$street_value  = str_replace( '  ', ' ', trim( rgar( $entry, $field_id . '.1' ) ) );
 		$street2_value = str_replace( '  ', ' ', trim( rgar( $entry, $field_id . '.2' ) ) );
 		$city_value    = str_replace( '  ', ' ', trim( rgar( $entry, $field_id . '.3' ) ) );
@@ -1185,329 +1521,327 @@ class GFMailChimp extends GFFeedAddOn {
 		);
 
 		return implode( '  ', $address );
-	}
-
-
-	// # DEPRECATED ----------------------------------------------------------------------------------------------------
-
-	/**
-	 * Append the new interest groups to the current groups and update the list merge_vars.
-	 *
-	 * @param array $merge_vars The list merge_vars containing the new groups.
-	 * @param array $current_groupings The current groups.
-	 *
-	 * @deprecated No longer used.
-	 *
-	 * @return array
-	 */
-	public function append_groups( $merge_vars, $current_groupings ) {
-
-		if ( empty( $current_groupings ) ) {
-			return $merge_vars;
-		}
-
-		$active_current_groups = array();
-		$i                     = 0;
-		foreach ( $current_groupings as &$current_group ) {
-			foreach ( $current_group['groups'] as $current_grouping ) {
-				if ( $current_grouping['interested'] == true ) {
-					$active_current_groups[ $i ]['name']     = $current_group['name'];
-					$active_current_groups[ $i ]['groups'][] = $current_grouping['name'];
-				}
-			}
-
-			$i ++;
-		}
-
-		if ( ! isset( $merge_vars['GROUPINGS'] ) ) {
-			$this->log_debug( __METHOD__ . '(): No groups to append. Returning existing groups.' );
-			$merge_vars['GROUPINGS'] = $active_current_groups;
-		} else {
-			$this->log_debug( __METHOD__ . '(): Appending groups to existing groups.' );
-			$merge_vars['GROUPINGS'] = array_merge_recursive( $merge_vars['GROUPINGS'], $active_current_groups );
-		}
-
-		return $merge_vars;
-	}
-
-	/**
-	 * Retrieve existing groups.
-	 *
-	 * @param string $grouping_name The group name.
-	 * @param array $current_groupings The current groups.
-	 *
-	 * @deprecated No longer used.
-	 *
-	 * @return array
-	 */
-	public static function get_existing_groups( $grouping_name, $current_groupings ) {
-
-		foreach ( $current_groupings as $grouping ) {
-			if ( strtolower( $grouping['name'] ) == strtolower( $grouping_name ) ) {
-				return $grouping['groups'];
-			}
-		}
-
-		return array();
-	}
-
-
-	// # TO FRAMEWORK MIGRATION ----------------------------------------------------------------------------------------
-
-	/**
-	 * Initialize the admin specific hooks.
-	 */
-	public function init_admin() {
-
-		parent::init_admin();
-
-		add_filter( 'gform_addon_navigation', array( $this, 'maybe_create_menu' ) );
-	}
-
-	/**
-	 * Maybe add the temporary plugin page to the menu.
-	 *
-	 * @param array $menus
-	 *
-	 * @return array
-	 */
-	public function maybe_create_menu( $menus ) {
-
-		$current_user           = wp_get_current_user();
-		$dismiss_mailchimp_menu = get_metadata( 'user', $current_user->ID, 'dismiss_mailchimp_menu', true );
-		if ( $dismiss_mailchimp_menu != '1' ) {
-			$menus[] = array(
-				'name'       => $this->_slug,
-				'label'      => $this->get_short_title(),
-				'callback'   => array( $this, 'temporary_plugin_page' ),
-				'permission' => $this->_capabilities_form_settings
-			);
-		}
-
-		return $menus;
-	}
-
-	/**
-	 * Initialize the AJAX hooks.
-	 */
-	public function init_ajax() {
-		parent::init_ajax();
-
-		add_action( 'wp_ajax_gf_dismiss_mailchimp_menu', array( $this, 'ajax_dismiss_menu' ) );
 
 	}
 
-	/**
-	 * Update the user meta to indicate they shouldn't see the temporary plugin page again.
-	 */
-	public function ajax_dismiss_menu() {
 
-		$current_user = wp_get_current_user();
-		update_metadata( 'user', $current_user->ID, 'dismiss_mailchimp_menu', '1' );
-	}
 
-	/**
-	 * Display a temporary page explaining how feeds are now managed.
-	 */
-	public function temporary_plugin_page() {
-		$current_user = wp_get_current_user();
-		?>
-		<script type="text/javascript">
-			function dismissMenu() {
-				jQuery('#gf_spinner').show();
-				jQuery.post(ajaxurl, {
-						action: "gf_dismiss_mailchimp_menu"
-					},
-					function (response) {
-						document.location.href = '?page=gf_edit_forms';
-						jQuery('#gf_spinner').hide();
-					}
-				);
 
-			}
-		</script>
 
-		<div class="wrap about-wrap">
-			<h1><?php esc_html_e( 'MailChimp Add-On v3.0', 'gravityformsmailchimp' ) ?></h1>
-
-			<div class="about-text"><?php esc_html_e( 'Thank you for updating! The new version of the Gravity Forms MailChimp Add-On makes changes to how you manage your MailChimp integration.', 'gravityformsmailchimp' ) ?></div>
-			<div class="changelog">
-				<hr/>
-				<div class="feature-section col two-col">
-					<div class="col-1">
-						<h3><?php esc_html_e( 'Manage MailChimp Contextually', 'gravityformsmailchimp' ) ?></h3>
-
-						<p><?php esc_html_e( 'MailChimp Feeds are now accessed via the MailChimp sub-menu within the Form Settings for the Form with which you would like to integrate MailChimp.', 'gravityformsmailchimp' ) ?></p>
-					</div>
-					<div class="col-2 last-feature">
-						<img src="http://gravityforms.s3.amazonaws.com/webimages/AddonNotice/NewMailChimp3.png">
-					</div>
-				</div>
-
-				<hr/>
-
-				<form method="post" id="dismiss_menu_form" style="margin-top: 20px;">
-					<input type="checkbox" name="dismiss_mailchimp_menu" value="1" onclick="dismissMenu();">
-					<label><?php esc_html_e( 'I understand this change, dismiss this message!', 'gravityformsmailchimp' ) ?></label>
-					<img id="gf_spinner" src="<?php echo GFCommon::get_base_url() . '/images/spinner.gif' ?>" alt="<?php esc_attr_e( 'Please wait...', 'gravityformsmailchimp' ) ?>" style="display:none;"/>
-				</form>
-
-			</div>
-		</div>
-		<?php
-	}
+	// # UPGRADES ------------------------------------------------------------------------------------------------------
 
 	/**
 	 * Checks if a previous version was installed and if the feeds need migrating to the framework structure.
+	 *
+	 * @since  3.0
+	 * @access public
 	 *
 	 * @param string $previous_version The version number of the previously installed version.
 	 */
 	public function upgrade( $previous_version ) {
 
+		// If previous version is not defined, set it to the version stored in the options table.
 		if ( empty( $previous_version ) ) {
 			$previous_version = get_option( 'gf_mailchimp_version' );
 		}
+
+		// Run upgrade routine checks.
+		$previous_is_pre_40              = ! empty( $previous_version ) && version_compare( $previous_version, '4.0', '<' );
 		$previous_is_pre_addon_framework = ! empty( $previous_version ) && version_compare( $previous_version, '3.0.dev1', '<' );
 
 		if ( $previous_is_pre_addon_framework ) {
-
-			//get old plugin settings
-			$old_settings = get_option( 'gf_mailchimp_settings' );
-			//remove username and password from the old settings; these were very old legacy api settings that we do not support anymore
-
-			if ( is_array( $old_settings ) ) {
-
-				foreach ( $old_settings as $id => $setting ) {
-					if ( $id != 'username' && $id != 'password' ) {
-						if ( $id == 'apikey' ) {
-							$id = 'apiKey';
-						}
-						$new_settings[ $id ] = $setting;
-					}
-				}
-				$this->update_plugin_settings( $new_settings );
-
-			}
-
-			//get old feeds
-			$old_feeds = $this->get_old_feeds();
-
-			if ( $old_feeds ) {
-
-				$counter = 1;
-				foreach ( $old_feeds as $old_feed ) {
-					$feed_name  = 'Feed ' . $counter;
-					$form_id    = $old_feed['form_id'];
-					$is_active  = rgar( $old_feed, 'is_active' ) ? '1' : '0';
-					$field_maps = rgar( $old_feed['meta'], 'field_map' );
-					$groups     = rgar( $old_feed['meta'], 'groups' );
-					$list_id    = rgar( $old_feed['meta'], 'contact_list_id' );
-
-					$new_meta = array(
-						'feedName'         => $feed_name,
-						'mailchimpList'    => $list_id,
-						'double_optin'     => rgar( $old_feed['meta'], 'double_optin' ) ? '1' : '0',
-						'sendWelcomeEmail' => rgar( $old_feed['meta'], 'welcome_email' ) ? '1' : '0',
-					);
-
-					//add mappings
-					foreach ( $field_maps as $key => $mapping ) {
-						$new_meta[ 'mappedFields_' . $key ] = $mapping;
-					}
-
-					if ( ! empty( $groups ) ) {
-						$group_id = 0;
-						//add groups to meta
-						//get the groups from mailchimp because we need to use the main group id to build the key used to map the fields
-						//old data only has the text, use the text to get the id
-						$mailchimp_groupings = $this->get_mailchimp_groups( $list_id );
-
-						//loop through the existing feed data to create mappings for new tables
-						foreach ( $groups as $key => $group ) {
-							//get the name of the top level group so the id can be retrieved from the mailchimp data
-							foreach ( $mailchimp_groupings as $mailchimp_group ) {
-								if ( str_replace( '%', '', sanitize_title_with_dashes( $mailchimp_group['name'] ) ) == $key ) {
-									$group_id = $mailchimp_group['id'];
-									break;
-								}
-							}
-
-							if ( is_array( $group ) ) {
-								foreach ( $group as $subkey => $subgroup ) {
-									$setting_key_root                            = $this->get_group_setting_key( $group_id, $subgroup['group_label'] );
-									$new_meta[ $setting_key_root . '_enabled' ]  = rgar( $subgroup, 'enabled' ) ? '1' : '0';
-									$new_meta[ $setting_key_root . '_decision' ] = rgar( $subgroup, 'decision' );
-									$new_meta[ $setting_key_root . '_field_id' ] = rgar( $subgroup, 'field_id' );
-									$new_meta[ $setting_key_root . '_operator' ] = rgar( $subgroup, 'operator' );
-									$new_meta[ $setting_key_root . '_value' ]    = rgar( $subgroup, 'value' );
-
-								}
-							}
-						}
-					}
-
-					//add conditional logic, legacy only allowed one condition
-					$conditional_enabled = rgar( $old_feed['meta'], 'optin_enabled' );
-					if ( $conditional_enabled ) {
-						$new_meta['feed_condition_conditional_logic']        = 1;
-						$new_meta['feed_condition_conditional_logic_object'] = array(
-							'conditionalLogic' =>
-								array(
-									'actionType' => 'show',
-									'logicType'  => 'all',
-									'rules'      => array(
-										array(
-											'fieldId'  => rgar( $old_feed['meta'], 'optin_field_id' ),
-											'operator' => rgar( $old_feed['meta'], 'optin_operator' ),
-											'value'    => rgar( $old_feed['meta'], 'optin_value' )
-										),
-									)
-								)
-						);
-					} else {
-						$new_meta['feed_condition_conditional_logic'] = 0;
-					}
-
-					$this->insert_feed( $form_id, $is_active, $new_meta );
-					$counter ++;
-
-				}
-
-				//set paypal delay setting
-				$this->update_paypal_delay_settings( 'delay_mailchimp_subscription' );
-			}
+			$this->upgrade_to_addon_framework();
 		}
+
+		if ( $previous_is_pre_40 ) {
+			$this->convert_groups_to_categories();
+		}
+
+	}
+
+	/**
+	 * Convert groups in feed meta to interest categories.
+	 *
+	 * @since  4.0
+	 * @access public
+	 *
+	 * @uses GFAddOn::log_error()
+	 * @uses GFAddOn::get_plugin_settings()
+	 * @uses GFAddOn::update_plugin_settings()
+	 * @uses GFCache::delete()
+	 * @uses GFFeedAddOn::get_feeds()
+	 * @uses GFFeedAddOn::update_feed_meta()
+	 * @uses GFMailChimp::initialize_api()
+	 * @uses GF_MailChimp_API::get_interest_category_interests()
+	 * @uses GF_MailChimp_API::get_list_interest_categories()
+	 */
+	public function convert_groups_to_categories() {
+
+		// If API cannot be initialized, exit.
+		if ( ! $this->initialize_api() ) {
+			$this->log_error( __METHOD__ . '(): Unable to convert MailChimp groups to interest categories because API could not be initialized.' );
+			return;
+		}
+
+		// Get plugin settings.
+		$settings = $this->get_plugin_settings();
+
+		// Get MailChimp feeds.
+		$feeds = $this->get_feeds();
+		
+		// Loop through MailChimp feeds.
+		foreach ( $feeds as $feed ) {
+			
+			// If no list ID is set, skip it.
+			if ( ! rgars( $feed, 'meta/mailchimpList' ) ) {
+				continue;
+			}
+			
+			// Initialize categories array.
+			$categories = array();
+			
+			try {
+			
+				// Get interest categories for list.
+				$interest_categories = $this->api->get_list_interest_categories( $feed['meta']['mailchimpList'] );
+				
+			} catch ( Exception $e ) {
+				
+				// Log that we could not get interest categories.
+				$this->log_error( __METHOD__ . '(): Unable to updated feed #' . $feed['id'] . ' because interest categories could not be retrieved for MailChimp list ' . $feed['meta']['mailchimpList'] );
+				
+				continue;
+				
+			}
+
+			// Loop through interest categories.
+			foreach ( $interest_categories as $interest_category ) {
+				
+				// Get interests for interest category.
+				$interests = $this->api->get_interest_category_interests( $feed['meta']['mailchimpList'], $interest_category['id'] );
+				
+				// Loop through interests.
+				foreach ( $interests as $interest ) {
+					
+					// Add interest to categories array using sanitized name.
+					$categories[ $interest['id'] ] = sanitize_title_with_dashes( $interest['name'] );
+					
+				}
+				
+			}
+			
+			// Loop through feed meta.
+			foreach ( $feed['meta'] as $key => $value ) {
+				
+				// If this is not a MailChimp group key, skip it.
+				if ( 0 !== strpos( $key, 'mc_group_' ) ) {
+					continue;
+				}
+				
+				// Explode meta key.
+				$exploded_key = explode( '_', $key );
+				
+				// Get MailChimp group key.
+				$mc_key = $exploded_key[0] . '_' . $exploded_key[1] . '_' . $exploded_key[2];
+				unset( $exploded_key[0], $exploded_key[1], $exploded_key[2] );
+				
+				// Get meta key without group name.
+				$meta_key = implode( '_', $exploded_key );
+				
+				// Get settings key for MailChimp group key.
+				$settings_key = array_search( $mc_key, $settings );
+				
+				// Get sanitized group name.
+				$sanitized_group_name = substr( $settings_key, strrpos( $settings_key, '_' ) + 1 );
+				
+				// Get new category ID.
+				$category_id = array_search( $sanitized_group_name, $categories );
+				
+				// If category ID exists, migrate group setting.
+				if ( $category_id ) {
+					$feed['meta'][ 'interestCategory_' . $category_id . '_' . $meta_key ] = $value;
+					unset( $feed['meta'][ $key ] );
+				}				
+				
+			}
+			
+			// Save feed.
+			$this->update_feed_meta( $feed['id'], $feed['meta'] );
+			
+		}
+		
+		// Reset plugin settings to just API key.
+		$settings = array( 'apiKey' => $settings['apiKey'] );
+		
+		// Save plugin settings.
+		$this->update_plugin_settings( $settings );
+
+		// Delete cache.
+		GFCache::delete( 'mailchimp_plugin_settings' );
+
+	}
+
+	/**
+	 * Upgrade versions of MailChimp Add-On before 3.0 to the Add-On Framework.
+	 *
+	 * @since  4.0
+	 * @access public
+	 */
+	public function upgrade_to_addon_framework() {
+
+		//get old plugin settings
+		$old_settings = get_option( 'gf_mailchimp_settings' );
+		//remove username and password from the old settings; these were very old legacy api settings that we do not support anymore
+
+		if ( is_array( $old_settings ) ) {
+
+			foreach ( $old_settings as $id => $setting ) {
+				if ( $id != 'username' && $id != 'password' ) {
+					if ( $id == 'apikey' ) {
+						$id = 'apiKey';
+					}
+					$new_settings[ $id ] = $setting;
+				}
+			}
+			$this->update_plugin_settings( $new_settings );
+
+		}
+
+		//get old feeds
+		$old_feeds = $this->get_old_feeds();
+
+		if ( $old_feeds ) {
+
+			$counter = 1;
+			foreach ( $old_feeds as $old_feed ) {
+				$feed_name  = 'Feed ' . $counter;
+				$form_id    = $old_feed['form_id'];
+				$is_active  = rgar( $old_feed, 'is_active' ) ? '1' : '0';
+				$field_maps = rgar( $old_feed['meta'], 'field_map' );
+				$groups     = rgar( $old_feed['meta'], 'groups' );
+				$list_id    = rgar( $old_feed['meta'], 'contact_list_id' );
+
+				$new_meta = array(
+					'feedName'         => $feed_name,
+					'mailchimpList'    => $list_id,
+					'double_optin'     => rgar( $old_feed['meta'], 'double_optin' ) ? '1' : '0',
+					'sendWelcomeEmail' => rgar( $old_feed['meta'], 'welcome_email' ) ? '1' : '0',
+				);
+
+				//add mappings
+				foreach ( $field_maps as $key => $mapping ) {
+					$new_meta[ 'mappedFields_' . $key ] = $mapping;
+				}
+
+				if ( ! empty( $groups ) ) {
+					$group_id = 0;
+					//add groups to meta
+					//get the groups from mailchimp because we need to use the main group id to build the key used to map the fields
+					//old data only has the text, use the text to get the id
+					$mailchimp_groupings = $this->get_interest_categories( $list_id );
+
+					//loop through the existing feed data to create mappings for new tables
+					foreach ( $groups as $key => $group ) {
+						//get the name of the top level group so the id can be retrieved from the mailchimp data
+						foreach ( $mailchimp_groupings as $mailchimp_group ) {
+							if ( str_replace( '%', '', sanitize_title_with_dashes( $mailchimp_group['name'] ) ) == $key ) {
+								$group_id = $mailchimp_group['id'];
+								break;
+							}
+						}
+
+						if ( is_array( $group ) ) {
+							foreach ( $group as $subkey => $subgroup ) {
+								$setting_key_root                            = $this->get_group_setting_key( $group_id, $subgroup['group_label'] );
+								$new_meta[ $setting_key_root . '_enabled' ]  = rgar( $subgroup, 'enabled' ) ? '1' : '0';
+								$new_meta[ $setting_key_root . '_decision' ] = rgar( $subgroup, 'decision' );
+								$new_meta[ $setting_key_root . '_field_id' ] = rgar( $subgroup, 'field_id' );
+								$new_meta[ $setting_key_root . '_operator' ] = rgar( $subgroup, 'operator' );
+								$new_meta[ $setting_key_root . '_value' ]    = rgar( $subgroup, 'value' );
+
+							}
+						}
+					}
+				}
+
+				//add conditional logic, legacy only allowed one condition
+				$conditional_enabled = rgar( $old_feed['meta'], 'optin_enabled' );
+				if ( $conditional_enabled ) {
+					$new_meta['feed_condition_conditional_logic']        = 1;
+					$new_meta['feed_condition_conditional_logic_object'] = array(
+						'conditionalLogic' =>
+							array(
+								'actionType' => 'show',
+								'logicType'  => 'all',
+								'rules'      => array(
+									array(
+										'fieldId'  => rgar( $old_feed['meta'], 'optin_field_id' ),
+										'operator' => rgar( $old_feed['meta'], 'optin_operator' ),
+										'value'    => rgar( $old_feed['meta'], 'optin_value' )
+									),
+								)
+							)
+					);
+				} else {
+					$new_meta['feed_condition_conditional_logic'] = 0;
+				}
+
+				$this->insert_feed( $form_id, $is_active, $new_meta );
+				$counter ++;
+
+			}
+
+			//set paypal delay setting
+			$this->update_paypal_delay_settings( 'delay_mailchimp_subscription' );
+		}
+
+		// Delete old options.
+		delete_option( 'gf_mailchimp_settings' );
+		delete_option( 'gf_mailchimp_version' );
+
 	}
 
 	/**
 	 * Migrate the delayed payment setting for the PayPal add-on integration.
 	 *
-	 * @param $old_delay_setting_name
+	 * @since  3.0
+	 * @access public
+	 *
+	 * @param string $old_delay_setting_name Old PayPal delay settings name.
+	 *
+	 * @uses GFAddon::log_debug()
+	 * @uses GFFeedAddOn::get_feeds_by_slug()
+	 * @uses GFFeedAddOn::update_feed_meta()
+	 * @uses GFMailChimp::get_old_paypal_feeds()
+	 * @uses wpdb::update()
 	 */
 	public function update_paypal_delay_settings( $old_delay_setting_name ) {
+
 		global $wpdb;
+
+		// Log that we are checking for delay settings for migration.
 		$this->log_debug( __METHOD__ . '(): Checking to see if there are any delay settings that need to be migrated for PayPal Standard.' );
 
 		$new_delay_setting_name = 'delay_' . $this->_slug;
 
-		//get paypal feeds from old table
+		// Get paypal feeds from old table.
 		$paypal_feeds_old = $this->get_old_paypal_feeds();
 
-		//loop through feeds and look for delay setting and create duplicate with new delay setting for the framework version of PayPal Standard
+		// Loop through feeds and look for delay setting and create duplicate with new delay setting for the framework version of PayPal Standard
 		if ( ! empty( $paypal_feeds_old ) ) {
 			$this->log_debug( __METHOD__ . '(): Old feeds found for ' . $this->_slug . ' - copying over delay settings.' );
 			foreach ( $paypal_feeds_old as $old_feed ) {
 				$meta = $old_feed['meta'];
 				if ( ! rgempty( $old_delay_setting_name, $meta ) ) {
 					$meta[ $new_delay_setting_name ] = $meta[ $old_delay_setting_name ];
-					//update paypal meta to have new setting
+					//Update paypal meta to have new setting
 					$meta = maybe_serialize( $meta );
 					$wpdb->update( "{$wpdb->prefix}rg_paypal", array( 'meta' => $meta ), array( 'id' => $old_feed['id'] ), array( '%s' ), array( '%d' ) );
 				}
 			}
 		}
 
-		//get paypal feeds from new framework table
+		// Get paypal feeds from new framework table.
 		$paypal_feeds = $this->get_feeds_by_slug( 'gravityformspaypal' );
 		if ( ! empty( $paypal_feeds ) ) {
 			$this->log_debug( __METHOD__ . '(): New feeds found for ' . $this->_slug . ' - copying over delay settings.' );
@@ -1519,17 +1853,30 @@ class GFMailChimp extends GFFeedAddOn {
 				}
 			}
 		}
+
 	}
 
 	/**
 	 * Retrieve any old PayPal feeds.
 	 *
+	 * @since  3.0
+	 * @access public
+	 *
+	 * @uses GFAddOn::log_debug()
+	 * @uses GFAddOn::table_exists()
+	 * @uses GFFormsModel::get_form_table_name()
+	 * @uses wpdb::get_results()
+	 *
 	 * @return bool|array
 	 */
 	public function get_old_paypal_feeds() {
+
 		global $wpdb;
+
+		// Get old PayPal Add-On table name.
 		$table_name = $wpdb->prefix . 'rg_paypal';
 
+		// If the table does not exist, exit.
 		if ( ! $this->table_exists( $table_name ) ) {
 			return false;
 		}
@@ -1545,7 +1892,7 @@ class GFMailChimp extends GFFeedAddOn {
 
 		$this->log_debug( __METHOD__ . "(): error?: {$wpdb->last_error}" );
 
-		$count = sizeof( $results );
+		$count = count( $results );
 
 		$this->log_debug( __METHOD__ . "(): count: {$count}" );
 
@@ -1554,17 +1901,29 @@ class GFMailChimp extends GFFeedAddOn {
 		}
 
 		return $results;
+
 	}
 
 	/**
-	 * Retrieve any old feeds which need migrating to the framework,
+	 * Retrieve any old feeds which need migrating to the Feed Add-On Framework.
+	 *
+	 * @since  3.0
+	 * @access public
+	 *
+	 * @uses GFAddOn::table_exists()
+	 * @uses GFFormsModel::get_form_table_name()
+	 * @uses wpdb::get_results()
 	 *
 	 * @return bool|array
 	 */
 	public function get_old_feeds() {
+
 		global $wpdb;
+
+		// Get pre-3.0 table name.
 		$table_name = $wpdb->prefix . 'rg_mailchimp';
 
+		// If the table does not exist, exit.
 		if ( ! $this->table_exists( $table_name ) ) {
 			return false;
 		}
@@ -1576,12 +1935,13 @@ class GFMailChimp extends GFFeedAddOn {
 
 		$results = $wpdb->get_results( $sql, ARRAY_A );
 
-		$count = sizeof( $results );
+		$count = count( $results );
 		for ( $i = 0; $i < $count; $i ++ ) {
 			$results[ $i ]['meta'] = maybe_unserialize( $results[ $i ]['meta'] );
 		}
 
 		return $results;
+
 	}
 
 }

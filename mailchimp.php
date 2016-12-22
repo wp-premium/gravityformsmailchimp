@@ -1,9 +1,9 @@
 <?php
-/*
+/**
 Plugin Name: Gravity Forms MailChimp Add-On
 Plugin URI: http://www.gravityforms.com
-Description: Integrates Gravity Forms with MailChimp allowing form submissions to be automatically sent to your MailChimp account
-Version: 3.7.1
+Description: Integrates Gravity Forms with MailChimp, allowing form submissions to be automatically sent to your MailChimp account
+Version: 4.0
 Author: rocketgenius
 Author URI: http://www.rocketgenius.com
 Text Domain: gravityformsmailchimp
@@ -25,15 +25,27 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-*/
+ **/
 
-define( 'GF_MAILCHIMP_VERSION', '3.7.1' );
+define( 'GF_MAILCHIMP_VERSION', '4.0' );
 
+// If Gravity Forms is loaded, bootstrap the Mailchimp Add-On.
 add_action( 'gform_loaded', array( 'GF_MailChimp_Bootstrap', 'load' ), 5 );
 
+/**
+ * Class GF_MailChimp_Bootstrap
+ *
+ * Handles the loading of the Mailchimp Add-On and registers with the Add-On Framework.
+ */
 class GF_MailChimp_Bootstrap {
 
-	public static function load(){
+	/**
+	 * If the Feed Add-On Framework exists, Mailchimp Add-On is loaded.
+	 *
+	 * @access public
+	 * @static
+	 */
+	public static function load() {
 
 		if ( ! method_exists( 'GFForms', 'include_feed_addon_framework' ) ) {
 			return;
@@ -45,6 +57,13 @@ class GF_MailChimp_Bootstrap {
 	}
 }
 
-function gf_mailchimp(){
+/**
+ * Returns an instance of the GFMailChimp class
+ *
+ * @see    GFMailChimp::get_instance()
+ *
+ * @return object GFMailChimp
+ */
+function gf_mailchimp() {
 	return GFMailChimp::get_instance();
 }
