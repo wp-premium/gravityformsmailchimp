@@ -1,4 +1,27 @@
 ------------------------------------------------------------------------------------------------------------------
+Version 4.0
+    - Added gform_mailchimp_subscription filter to modify subscription object.
+    - Removed 3.0 upgrade page.
+    - Removed send welcome email as feed settings option.
+    - Updated API requests to use MailChimp API 3.0.
+
+------------------------------------------------------------------------------------------------------------------
+Version 3.7.5
+	- Fixed strings for translations
+
+------------------------------------------------------------------------------------------------------------------
+Version 3.7.4
+    - Fixed an issue with multi-input fields available for use with groups logic not including the inputs (i.e. Name and Address).
+
+------------------------------------------------------------------------------------------------------------------
+Version 3.7.3
+    - Updated the MailChimp API to support the WP_PROXY_HOST and WP_PROXY_PORT constants when configuring the cURL options.
+
+------------------------------------------------------------------------------------------------------------------
+Version 3.7.2
+    - Fixed an issue which was preventing feed processing aborting early if there is an issue with the MailChimp API.
+
+------------------------------------------------------------------------------------------------------------------
 Version 3.7.1
     - Fixed an issue where the cached settings were not cleared when the add-on was uninstalled.
     - Fixed a rare issue for some server environments where several groups could be assigned the same settings key causing js issues in the feed editor.
