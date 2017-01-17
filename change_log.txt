@@ -1,4 +1,20 @@
 ------------------------------------------------------------------------------------------------------------------
+Version 4.1
+    - Added additional error logging when creating a subscription.
+    - Added support for configuring a note to be added to the subscriber.
+    - Fixed a fatal error during feed processing when a list field is mapped to an entry property.
+    - Fixed an issue where an Invalid Resource error would occur if the subscribers merge_fields property was included in the request when empty.
+    - Fixed an issue with the note being urlencoded during merge tag processing.
+    - Fixed users not being subscribed due to incorrect address formatting.
+    - Increased number of merge fields returned for a list.
+	- Updated feed processing to bypass override empty fields check for address fields.
+    - Updated maximum number of category interests returned by the API.
+    - Updated maximum number of interest groups returned by API.
+    - Updated merge fields field map to only allow Address fields to be mapped to MailChimp address merge fields.
+	- Updated strings for translations.
+    - Updated subscription object to use existing member status where possible.
+
+------------------------------------------------------------------------------------------------------------------
 Version 4.0
     - Added gform_mailchimp_subscription filter to modify subscription object.
     - Removed 3.0 upgrade page.

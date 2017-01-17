@@ -224,13 +224,13 @@ class GFMailChimp extends GFFeedAddOn {
 	 * @access public
 	 */
 	public function uninstall() {
-		
+
 		parent::uninstall();
-		
+
 		GFCache::delete( 'mailchimp_plugin_settings' );
 		delete_option( 'gf_mailchimp_settings' );
 		delete_option( 'gf_mailchimp_version' );
-		
+
 	}
 
 	/**
@@ -276,7 +276,7 @@ class GFMailChimp extends GFFeedAddOn {
 			array(
 				'description' => '<p>' .
 					sprintf(
-						esc_html__( 'MailChimp makes it easy to send email newsletters to your customers, manage your subscriber lists, and track campaign performance. Use Gravity Forms to collect customer information and automatically add it to your MailChimp subscriber list. If you don\'t have a MailChimp account, you can %1$s sign up for one here.%2$s', 'gravityformsmailchimp' ),
+						esc_html__( 'MailChimp makes it easy to send email newsletters to your customers, manage your subscriber lists, and track campaign performance. Use Gravity Forms to collect customer information and automatically add it to your MailChimp subscriber list. If you don\'t have a MailChimp account, you can %1$ssign up for one here.%2$s', 'gravityformsmailchimp' ),
 						'<a href="http://www.mailchimp.com/" target="_blank">', '</a>'
 					)
 					. '</p>',
@@ -350,7 +350,7 @@ class GFMailChimp extends GFFeedAddOn {
 						'tooltip'   => sprintf(
 							'<h6>%s</h6>%s',
 							esc_html__( 'Map Fields', 'gravityformsmailchimp' ),
-							esc_html__( 'Associate your MailChimp merge variables to the appropriate Gravity Form fields by selecting the appropriate form field from the list.', 'gravityformsmailchimp' )
+							esc_html__( 'Associate your MailChimp merge tags to the appropriate Gravity Form fields by selecting the appropriate form field from the list.', 'gravityformsmailchimp' )
 						),
 					),
 					array(
@@ -362,16 +362,6 @@ class GFMailChimp extends GFFeedAddOn {
 							'<h6>%s</h6>%s',
 							esc_html__( 'Groups', 'gravityformsmailchimp' ),
 							esc_html__( 'When one or more groups are enabled, users will be assigned to the groups in addition to being subscribed to the MailChimp list. When disabled, users will not be assigned to groups.', 'gravityformsmailchimp' )
-						),
-					),
-					array(
-						'name'    => 'optinCondition',
-						'label'   => esc_html__( 'Conditional Logic', 'gravityformsmailchimp' ),
-						'type'    => 'feed_condition',
-						'tooltip' => sprintf(
-							'<h6>%s</h6>%s',
-							esc_html__( 'Conditional Logic', 'gravityformsmailchimp' ),
-							esc_html__( 'When conditional logic is enabled, form submissions will only be exported to MailChimp when the conditions are met. When disabled all form submissions will be exported.', 'gravityformsmailchimp' )
 						),
 					),
 					array(
@@ -394,6 +384,22 @@ class GFMailChimp extends GFFeedAddOn {
 								'name'  => 'markAsVIP',
 								'label' => esc_html__( 'Mark subscriber as VIP', 'gravityformsmailchimp' ),
 							),
+						),
+					),
+					array(
+						'name'  => 'note',
+						'type'  => 'textarea',
+						'class' => 'medium merge-tag-support mt-position-right mt-hide_all_fields',
+						'label' => esc_html__( 'Note', 'gravityformsmailchimp' ),
+					),
+					array(
+						'name'    => 'optinCondition',
+						'label'   => esc_html__( 'Conditional Logic', 'gravityformsmailchimp' ),
+						'type'    => 'feed_condition',
+						'tooltip' => sprintf(
+							'<h6>%s</h6>%s',
+							esc_html__( 'Conditional Logic', 'gravityformsmailchimp' ),
+							esc_html__( 'When conditional logic is enabled, form submissions will only be exported to MailChimp when the conditions are met. When disabled all form submissions will be exported.', 'gravityformsmailchimp' )
 						),
 					),
 					array( 'type' => 'save' ),
@@ -561,12 +567,25 @@ class GFMailChimp extends GFFeedAddOn {
 			// Loop through merge fields.
 			foreach ( $merge_fields['merge_fields'] as $merge_field ) {
 
+				// Define required field type.
+				$field_type = null;
+
+				// If this is an email merge field, set field types to "email" or "hidden".
+				if ( 'EMAIL' === strtoupper( $merge_field['tag'] ) ) {
+					$field_type = array( 'email', 'hidden' );
+				}
+
+				// If this is an address merge field, set field type to "address".
+				if ( 'address' === $merge_field['type'] ) {
+					$field_type = array( 'address' );
+				}
+
 				// Add to field map.
 				$field_map[ $merge_field['tag'] ] = array(
 					'name'       => $merge_field['tag'],
 					'label'      => $merge_field['name'],
 					'required'   => $merge_field['required'],
-					'field_type' => strtoupper( $merge_field['tag'] ) === 'EMAIL' ? array( 'email', 'hidden' ) : '',
+					'field_type' => $field_type,
 				);
 
 			}
@@ -920,7 +939,15 @@ class GFMailChimp extends GFFeedAddOn {
 			return $entry;
 		}
 
-		// Set override empty fields flag.
+		/**
+		 * Prevent empty form fields erasing values already stored in the mapped MailChimp MMERGE fields
+		 * when updating an existing subscriber.
+		 *
+		 * @param bool  $override If the merge field should be overridden.
+		 * @param array $form     The form object.
+		 * @param array $entry    The entry object.
+		 * @param array $feed     The feed object.
+		 */
 		$override_empty_fields = gf_apply_filters( 'gform_mailchimp_override_empty_fields', array( $form['id'] ), true, $form, $entry, $feed );
 
 		// Log that empty fields will not be overridden.
@@ -942,11 +969,14 @@ class GFMailChimp extends GFFeedAddOn {
 			// Set merge var name to current field map name.
 			$this->merge_var_name = $name;
 
+			// Get field object.
+			$field = GFFormsModel::get_field( $form, $field_id );
+
 			// Get field value.
 			$field_value = $this->get_field_value( $form, $entry, $field_id );
 
 			// If field value is empty and we are not overriding empty fields, skip it.
-			if ( empty( $field_value ) && ! $override_empty_fields ) {
+			if ( empty( $field_value ) && ( ! $override_empty_fields || ( is_object( $field ) && 'address' === $field->get_input_type() ) ) ) {
 				continue;
 			}
 
@@ -998,7 +1028,7 @@ class GFMailChimp extends GFFeedAddOn {
 			if ( 404 !== $e->getCode() ) {
 
 				// Log that we could not get the member information.
-				$this->add_feed_error( sprintf( esc_html__( 'Unable to check if email address is already a member: %s', 'gravityformsmailchimp' ), $e->getMessage() ), $feed, $entry, $form );
+				$this->add_feed_error( sprintf( esc_html__( 'Unable to check if email address is already used by a member: %s', 'gravityformsmailchimp' ), $e->getMessage() ), $feed, $entry, $form );
 
 				return $entry;
 
@@ -1023,6 +1053,9 @@ class GFMailChimp extends GFFeedAddOn {
 			return;
 		}
 
+		// If member status is not defined, set to subscribed.
+		$member_status = isset( $member_status ) ? $member_status : 'subscribed';
+
 		// Prepare subscription arguments.
 		$subscription = array(
 			'id'           => $feed['meta']['mailchimpList'],
@@ -1031,9 +1064,10 @@ class GFMailChimp extends GFFeedAddOn {
 			'interests'    => $interests,
 			'email_type'   => 'html',
 			'double_optin' => rgars( $feed, 'meta/double_optin' ) ? true : false,
-			'status'       => 'subscribed',
+			'status'       => $member_status,
 			'ip_signup'    => rgar( $entry, 'ip' ),
 			'vip'          => rgars( $feed, 'meta/markAsVIP' ) ? true : false,
+			'note'         => rgars( $feed, 'meta/note' ),
 		);
 
 		// Prepare transaction type for filter.
@@ -1078,27 +1112,68 @@ class GFMailChimp extends GFFeedAddOn {
 		 * @param array  $feed         The feed object.
 		 */
 		$subscription = gf_apply_filters( array( 'gform_mailchimp_subscription', $form['id'] ), $subscription, $list_id, $form, $entry, $feed );
+
+		// Remove merge_fields if none are defined.
+		if ( empty( $subscription['merge_fields'] ) ) {
+			unset( $subscription['merge_fields'] );
+		}
 		
 		// Remove interests if none are defined.
 		if ( empty( $subscription['interests'] ) ) {
 			unset( $subscription['interests'] );
 		}
 
+		// Remove VIP if not enabled.
+		if ( ! $subscription['vip'] ) {
+			unset( $subscription['vip'] );
+		}
+
+		// Remove note from the subscription object and process any merge tags.
+		$note = GFCommon::replace_variables( $subscription['note'], $form, $entry, false, true, false, 'text' );
+		unset( $subscription['note'] );
+
+		$action = $member_found ? 'added' : 'updated';
+
 		try {
 
 			// Log the subscriber to be added or updated.
-			$this->log_debug( __METHOD__ . '(): Subscriber to be added/updated: ' . print_r( $subscription, true ) );
+			$this->log_debug( __METHOD__ . "(): Subscriber to be {$action}: " . print_r( $subscription, true ) );
 
 			// Add or update subscriber.
 			$this->api->update_list_member( $list_id, $subscription['email_address'], $subscription );
 
 			// Log that the subscription was added or updated.
-			$this->log_debug( __METHOD__ . '(): Subscriber successfully added/updated.' );
+			$this->log_debug( __METHOD__ . "(): Subscriber successfully {$action}." );
 
 		} catch ( Exception $e ) {
 
 			// Log that subscription could not be added or updated.
 			$this->add_feed_error( sprintf( esc_html__( 'Unable to add/update subscriber: %s', 'gravityformsmailchimp' ), $e->getMessage() ), $feed, $entry, $form );
+
+			// Log field errors.
+			if ( $e->getErrors() ) {
+				$this->log_error( __METHOD__ . '(): Field errors when attempting subscription: ' . print_r( $e->getErrors(), true ) );
+			}
+
+			return;
+
+		}
+
+		if ( ! $note ) {
+			// Abort as there is no note to process.
+			return;
+		}
+
+		try {
+
+			// Add the note to the member.
+			$this->api->add_member_note( $list_id, $subscription['email_address'], $note );
+			$this->log_debug( __METHOD__ . '(): Note successfully added to subscriber.' );
+
+		} catch ( Exception $e ) {
+
+			// Log that the note could not be added.
+			$this->add_feed_error( sprintf( esc_html__( 'Unable to add note to subscriber: %s', 'gravityformsmailchimp' ), $e->getMessage() ), $feed, $entry, $form );
 
 			return;
 
@@ -1496,31 +1571,37 @@ class GFMailChimp extends GFFeedAddOn {
 	 * @param array  $entry    The entry currently being processed.
 	 * @param string $field_id The ID of the field to retrieve the value for.
 	 *
-	 * @return string
+	 * @return array|null
 	 */
 	public function get_full_address( $entry, $field_id ) {
 
-		$street_value  = str_replace( '  ', ' ', trim( rgar( $entry, $field_id . '.1' ) ) );
-		$street2_value = str_replace( '  ', ' ', trim( rgar( $entry, $field_id . '.2' ) ) );
-		$city_value    = str_replace( '  ', ' ', trim( rgar( $entry, $field_id . '.3' ) ) );
-		$state_value   = str_replace( '  ', ' ', trim( rgar( $entry, $field_id . '.4' ) ) );
-		$zip_value     = trim( rgar( $entry, $field_id . '.5' ) );
-		$country_value = trim( rgar( $entry, $field_id . '.6' ) );
-
-		if ( ! empty( $country_value ) ) {
-			$country_value = GF_Fields::get( 'address' )->get_country_code( $country_value );
-		}
-
+		// Initialize address array.
 		$address = array(
-			! empty( $street_value ) ? $street_value : '-',
-			$street2_value,
-			! empty( $city_value ) ? $city_value : '-',
-			! empty( $state_value ) ? $state_value : '-',
-			! empty( $zip_value ) ? $zip_value : '-',
-			$country_value,
+			'addr1'   => str_replace( '  ', ' ', trim( rgar( $entry, $field_id . '.1' ) ) ),
+			'addr2'   => str_replace( '  ', ' ', trim( rgar( $entry, $field_id . '.2' ) ) ),
+			'city'    => str_replace( '  ', ' ', trim( rgar( $entry, $field_id . '.3' ) ) ),
+			'state'   => str_replace( '  ', ' ', trim( rgar( $entry, $field_id . '.4' ) ) ),
+			'zip'     => trim( rgar( $entry, $field_id . '.5' ) ),
+			'country' => trim( rgar( $entry, $field_id . '.6' ) ),
 		);
 
-		return implode( '  ', $address );
+		// Get address parts.
+		$address_parts = array_values( $address );
+
+		// Remove empty address parts.
+		$address_parts = array_filter( $address_parts );
+
+		// If no address parts exist, return null.
+		if ( empty( $address_parts ) ) {
+			return null;
+		}
+
+		// Replace country with country code.
+		if ( ! empty( $address['country'] ) ) {
+			$address['country'] = GF_Fields::get( 'address' )->get_country_code( $address['country'] );
+		}
+
+		return $address;
 
 	}
 
@@ -1588,91 +1669,91 @@ class GFMailChimp extends GFFeedAddOn {
 
 		// Get MailChimp feeds.
 		$feeds = $this->get_feeds();
-		
+
 		// Loop through MailChimp feeds.
 		foreach ( $feeds as $feed ) {
-			
+
 			// If no list ID is set, skip it.
 			if ( ! rgars( $feed, 'meta/mailchimpList' ) ) {
 				continue;
 			}
-			
+
 			// Initialize categories array.
 			$categories = array();
-			
+
 			try {
-			
+
 				// Get interest categories for list.
 				$interest_categories = $this->api->get_list_interest_categories( $feed['meta']['mailchimpList'] );
-				
+
 			} catch ( Exception $e ) {
-				
+
 				// Log that we could not get interest categories.
 				$this->log_error( __METHOD__ . '(): Unable to updated feed #' . $feed['id'] . ' because interest categories could not be retrieved for MailChimp list ' . $feed['meta']['mailchimpList'] );
-				
+
 				continue;
-				
+
 			}
 
 			// Loop through interest categories.
 			foreach ( $interest_categories as $interest_category ) {
-				
+
 				// Get interests for interest category.
 				$interests = $this->api->get_interest_category_interests( $feed['meta']['mailchimpList'], $interest_category['id'] );
-				
+
 				// Loop through interests.
 				foreach ( $interests as $interest ) {
-					
+
 					// Add interest to categories array using sanitized name.
 					$categories[ $interest['id'] ] = sanitize_title_with_dashes( $interest['name'] );
-					
+
 				}
-				
+
 			}
-			
+
 			// Loop through feed meta.
 			foreach ( $feed['meta'] as $key => $value ) {
-				
+
 				// If this is not a MailChimp group key, skip it.
 				if ( 0 !== strpos( $key, 'mc_group_' ) ) {
 					continue;
 				}
-				
+
 				// Explode meta key.
 				$exploded_key = explode( '_', $key );
-				
+
 				// Get MailChimp group key.
 				$mc_key = $exploded_key[0] . '_' . $exploded_key[1] . '_' . $exploded_key[2];
 				unset( $exploded_key[0], $exploded_key[1], $exploded_key[2] );
-				
+
 				// Get meta key without group name.
 				$meta_key = implode( '_', $exploded_key );
-				
+
 				// Get settings key for MailChimp group key.
 				$settings_key = array_search( $mc_key, $settings );
-				
+
 				// Get sanitized group name.
 				$sanitized_group_name = substr( $settings_key, strrpos( $settings_key, '_' ) + 1 );
-				
+
 				// Get new category ID.
 				$category_id = array_search( $sanitized_group_name, $categories );
-				
+
 				// If category ID exists, migrate group setting.
 				if ( $category_id ) {
 					$feed['meta'][ 'interestCategory_' . $category_id . '_' . $meta_key ] = $value;
 					unset( $feed['meta'][ $key ] );
-				}				
-				
+				}
+
 			}
-			
+
 			// Save feed.
 			$this->update_feed_meta( $feed['id'], $feed['meta'] );
-			
+
 		}
-		
+
 		// Reset plugin settings to just API key.
 		$settings = array( 'apiKey' => $settings['apiKey'] );
-		
+
 		// Save plugin settings.
 		$this->update_plugin_settings( $settings );
 

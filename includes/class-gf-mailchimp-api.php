@@ -79,7 +79,7 @@ class GF_MailChimp_API {
 	 */
 	public function get_interest_category_interests( $list_id, $category_id ) {
 
-		return $this->process_request( 'lists/' . $list_id . '/interest-categories/' . $category_id . '/interests', array(), 'GET', 'interests' );
+		return $this->process_request( 'lists/' . $list_id . '/interest-categories/' . $category_id . '/interests', array( 'count' => 9999 ), 'GET', 'interests' );
 
 	}
 
@@ -133,7 +133,7 @@ class GF_MailChimp_API {
 	 */
 	public function get_list_interest_categories( $list_id ) {
 
-		return $this->process_request( 'lists/' . $list_id . '/interest-categories', array(), 'GET', 'categories' );
+		return $this->process_request( 'lists/' . $list_id . '/interest-categories', array( 'count' => 9999 ), 'GET', 'categories' );
 
 	}
 
@@ -173,7 +173,7 @@ class GF_MailChimp_API {
 	 */
 	public function get_list_merge_fields( $list_id ) {
 
-		return $this->process_request( 'lists/' . $list_id . '/merge-fields' );
+		return $this->process_request( 'lists/' . $list_id . '/merge-fields', array( 'count' => 9999 ) );
 
 	}
 
@@ -197,6 +197,29 @@ class GF_MailChimp_API {
 		$subscriber_hash = md5( strtolower( $email_address ) );
 
 		return $this->process_request( 'lists/' . $list_id . '/members/' . $subscriber_hash, $subscription, 'PUT' );
+
+	}
+
+	/**
+	 * Add a note to the MailChimp list member.
+	 *
+	 * @since  4.0.10
+	 * @access public
+	 *
+	 * @param string $list_id       MailChimp list ID.
+	 * @param string $email_address Email address.
+	 * @param string $note          The note to be added to the member.
+	 *
+	 * @uses GF_MailChimp_API::process_request()
+	 *
+	 * @return array
+	 */
+	public function add_member_note( $list_id, $email_address, $note ) {
+
+		// Prepare subscriber hash.
+		$subscriber_hash = md5( strtolower( $email_address ) );
+
+		return $this->process_request( 'lists/' . $list_id . '/members/' . $subscriber_hash . '/notes', array( 'note' => $note ), 'POST' );
 
 	}
 
@@ -260,10 +283,23 @@ class GF_MailChimp_API {
 
 		// Decode response body.
 		$response['body'] = json_decode( $response['body'], true );
-		
+
 		// If status code is set, throw exception.
 		if ( isset( $response['body']['status'] ) && isset( $response['body']['title'] ) ) {
-			throw new Exception( $response['body']['title'], $response['body']['status'] );
+
+			// Initialize exception.
+			$exception = new GF_MailChimp_Exception( $response['body']['title'], $response['body']['status'] );
+
+			// Add detail.
+			$exception->setDetail( $response['body']['detail'] );
+
+			// Add errors if available.
+			if ( isset( $response['body']['errors'] ) ) {
+				$exception->setErrors( $response['body']['errors'] );
+			}
+
+			throw $exception;
+
 		}
 
 		// Remove links from response.
@@ -296,6 +332,92 @@ class GF_MailChimp_API {
 
 		// Set data center from API key.
 		$this->data_center = isset( $exploded_key[1] ) ? $exploded_key[1] : 'us1';
+
+	}
+
+}
+
+/**
+ * Gravity Forms MailChimp Exception.
+ *
+ * @since     4.0.3
+ * @package   GravityForms
+ * @author    Rocketgenius
+ * @copyright Copyright (c) 2016, Rocketgenius
+ */
+class GF_MailChimp_Exception extends Exception {
+
+	/**
+	 * Additional details about the exception.
+	 *
+	 * @since  4.0.3
+	 * @access protected
+	 * @var    string $detail Additional details about the exception.
+	 */
+	protected $detail;
+
+	/**
+	 * Exception error messages.
+	 *
+	 * @since  4.0.3
+	 * @access protected
+	 * @var    array $errors Exception error messages.
+	 */
+	protected $errors;
+
+	/**
+	 * Get additional details about the exception.
+	 *
+	 * @since  4.0.3
+	 * @access public
+	 *
+	 * @return string|null
+	 */
+	public function getDetail() {
+
+		return $this->detail;
+
+	}
+
+	/**
+	 * Get exception error messages.
+	 *
+	 * @since  4.0.3
+	 * @access public
+	 *
+	 * @return array|null
+	 */
+	public function getErrors() {
+
+		return $this->errors;
+
+	}
+
+	/**
+	 * Set exception details.
+	 *
+	 * @since  4.0.3
+	 * @access public
+	 *
+	 * @param string $detail Additional details about the exception.
+	 */
+	public function setDetail( $detail ) {
+
+		$this->detail = $detail;
+
+	}
+
+	/**
+	 * Set exception error messages.
+	 *
+	 * @since  4.0.3
+	 * @access public
+	 *
+	 * @param string $detail Additional error messages about the exception.
+	 */
+	public function setErrors( $errors ) {
+
+		$this->errors = $errors;
 
 	}
 
