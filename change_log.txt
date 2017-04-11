@@ -1,4 +1,21 @@
 ------------------------------------------------------------------------------------------------------------------
+Version 4.2
+	- Added additional logging when checking if a user's subscription status.
+	- Added existing member object as sixth parameter of "gform_mailchimp_subscription" filter.
+	- Fixed PHP warning when attempting to check for existing interests when member did not belong to any interest categories.
+	- Fixed Fatal error that happened in certain situations.
+	- Fixed existing interest categories not being properly associated to subscription object.
+	- Fixed an issue with subscriptions not being created due to empty merge fields.
+	- Fixed an issue which could prevent the feed groups being converted to interest categories when upgrading from older versions of the add-on.
+	- Fixed inability to use double opt-in with existing memebers.
+	- Fixed API response error handling; API key was incorrectly shown as valid when a 403 Forbidden error was returned.
+    - Fixed an issue with the field value used for interest category logic evaluation.
+	- Restored GFMailChimp::get_group_setting_key() for use when upgrading from older versions of MailChimp Add-On.
+	- Restored double opt-in support for members who are being resubscribed to a list they are unsubscribed from.
+	- Disabled double opt-in support for members who are being resubscribed to a list they are unsubscribed from. (Member will be automatically subscribed to the list. This is a temporary workaround for an issue with the MailChimp API.)
+	- Re-introduced support for "gform_mailchimp_keep_existing_groups" filter.
+
+------------------------------------------------------------------------------------------------------------------
 Version 4.1
     - Added additional error logging when creating a subscription.
     - Added support for configuring a note to be added to the subscriber.
