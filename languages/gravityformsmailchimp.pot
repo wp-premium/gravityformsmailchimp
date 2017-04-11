@@ -1,9 +1,9 @@
 # Copyright 2009-2017 Rocketgenius, Inc.
 msgid ""
 msgstr ""
-"Project-Id-Version: Gravity Forms MailChimp Add-On 4.1\n"
+"Project-Id-Version: Gravity Forms MailChimp Add-On 4.2\n"
 "Report-Msgid-Bugs-To: http://www.gravtiyhelp.com\n"
-"POT-Creation-Date: 2017-01-03 19:51:28+00:00\n"
+"POT-Creation-Date: 2017-04-03 19:18:35+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -158,15 +158,15 @@ msgstr ""
 msgid "A valid Email address must be provided."
 msgstr ""
 
-#: class-gf-mailchimp.php:1031
+#: class-gf-mailchimp.php:1020
 msgid "Unable to check if email address is already used by a member: %s"
 msgstr ""
 
-#: class-gf-mailchimp.php:1151
+#: class-gf-mailchimp.php:1217
 msgid "Unable to add/update subscriber: %s"
 msgstr ""
 
-#: class-gf-mailchimp.php:1176
+#: class-gf-mailchimp.php:1242
 msgid "Unable to add note to subscriber: %s"
 msgstr ""
 
