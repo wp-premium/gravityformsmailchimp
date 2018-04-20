@@ -1,13 +1,13 @@
-# Copyright 2009-2017 Rocketgenius, Inc.
+# Copyright 2009-2018 Rocketgenius, Inc.
 msgid ""
 msgstr ""
-"Project-Id-Version: Gravity Forms MailChimp Add-On 4.2\n"
+"Project-Id-Version: Gravity Forms MailChimp Add-On 4.3\n"
 "Report-Msgid-Bugs-To: http://www.gravtiyhelp.com\n"
-"POT-Creation-Date: 2017-04-03 19:18:35+00:00\n"
+"POT-Creation-Date: 2018-04-10 16:38:34+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2017-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: 2018-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Rocketgenius <customerservice@rocketgenius.com>\n"
 "Language-Team: Rocketgenius <customerservice@rocketgenius.com>\n"
 "X-Generator: Gravity Forms Build Server\n"
@@ -24,11 +24,11 @@ msgstr ""
 "X-Poedit-SourceCharset: utf-8\n"
 "X-Textdomain-Support: yes\n"
 
-#: class-gf-mailchimp.php:214
+#: class-gf-mailchimp.php:228
 msgid "Subscribe user to MailChimp only when payment is received."
 msgstr ""
 
-#: class-gf-mailchimp.php:279
+#: class-gf-mailchimp.php:295
 msgid ""
 "MailChimp makes it easy to send email newsletters to your customers, manage "
 "your subscriber lists, and track campaign performance. Use Gravity Forms to "
@@ -37,136 +37,136 @@ msgid ""
 "for one here.%2$s"
 msgstr ""
 
-#: class-gf-mailchimp.php:286
+#: class-gf-mailchimp.php:302
 msgid "MailChimp API Key"
 msgstr ""
 
-#: class-gf-mailchimp.php:315
+#: class-gf-mailchimp.php:331
 msgid "MailChimp Feed Settings"
 msgstr ""
 
-#: class-gf-mailchimp.php:319 class-gf-mailchimp.php:325
-#: class-gf-mailchimp.php:623
+#: class-gf-mailchimp.php:335 class-gf-mailchimp.php:341
+#: class-gf-mailchimp.php:628
 msgid "Name"
 msgstr ""
 
-#: class-gf-mailchimp.php:326
+#: class-gf-mailchimp.php:342
 msgid "Enter a feed name to uniquely identify this setup."
 msgstr ""
 
-#: class-gf-mailchimp.php:331 class-gf-mailchimp.php:336
-#: class-gf-mailchimp.php:624
+#: class-gf-mailchimp.php:347 class-gf-mailchimp.php:352
+#: class-gf-mailchimp.php:629
 msgid "MailChimp List"
 msgstr ""
 
-#: class-gf-mailchimp.php:337
+#: class-gf-mailchimp.php:353
 msgid "Select the MailChimp list you would like to add your contacts to."
 msgstr ""
 
-#: class-gf-mailchimp.php:347 class-gf-mailchimp.php:352
+#: class-gf-mailchimp.php:363 class-gf-mailchimp.php:368
 msgid "Map Fields"
 msgstr ""
 
-#: class-gf-mailchimp.php:353
+#: class-gf-mailchimp.php:369
 msgid ""
 "Associate your MailChimp merge tags to the appropriate Gravity Form fields "
 "by selecting the appropriate form field from the list."
 msgstr ""
 
-#: class-gf-mailchimp.php:358 class-gf-mailchimp.php:363
+#: class-gf-mailchimp.php:374 class-gf-mailchimp.php:379
 msgid "Groups"
 msgstr ""
 
-#: class-gf-mailchimp.php:364
+#: class-gf-mailchimp.php:380
 msgid ""
 "When one or more groups are enabled, users will be assigned to the groups "
 "in addition to being subscribed to the MailChimp list. When disabled, users "
 "will not be assigned to groups."
 msgstr ""
 
-#: class-gf-mailchimp.php:369
+#: class-gf-mailchimp.php:385
 msgid "Options"
 msgstr ""
 
-#: class-gf-mailchimp.php:374 class-gf-mailchimp.php:379
+#: class-gf-mailchimp.php:390 class-gf-mailchimp.php:395
 msgid "Double Opt-In"
 msgstr ""
 
-#: class-gf-mailchimp.php:380
+#: class-gf-mailchimp.php:396
 msgid ""
 "When the double opt-in option is enabled, MailChimp will send a "
 "confirmation email to the user and will only add them to your MailChimp "
 "list upon confirmation."
 msgstr ""
 
-#: class-gf-mailchimp.php:385
+#: class-gf-mailchimp.php:401
 msgid "Mark subscriber as VIP"
 msgstr ""
 
-#: class-gf-mailchimp.php:393
+#: class-gf-mailchimp.php:409
 msgid "Note"
 msgstr ""
 
-#: class-gf-mailchimp.php:397 class-gf-mailchimp.php:401
+#: class-gf-mailchimp.php:413 class-gf-mailchimp.php:417
 msgid "Conditional Logic"
 msgstr ""
 
-#: class-gf-mailchimp.php:402
+#: class-gf-mailchimp.php:418
 msgid ""
 "When conditional logic is enabled, form submissions will only be exported "
 "to MailChimp when the conditions are met. When disabled all form "
 "submissions will be exported."
 msgstr ""
 
-#: class-gf-mailchimp.php:465 class-gf-mailchimp.php:478
+#: class-gf-mailchimp.php:481 class-gf-mailchimp.php:494
 msgid "Could not load MailChimp contact lists. %sError: %s"
 msgstr ""
 
-#: class-gf-mailchimp.php:478
+#: class-gf-mailchimp.php:494
 msgid "No lists found."
 msgstr ""
 
-#: class-gf-mailchimp.php:490
+#: class-gf-mailchimp.php:506
 msgid "Select a MailChimp List"
 msgstr ""
 
-#: class-gf-mailchimp.php:536
+#: class-gf-mailchimp.php:552
 msgid "Email Address"
 msgstr ""
 
-#: class-gf-mailchimp.php:765
+#: class-gf-mailchimp.php:770
 msgid "Assign to group:"
 msgstr ""
 
-#: class-gf-mailchimp.php:774
+#: class-gf-mailchimp.php:779
 msgid "Always"
 msgstr ""
 
-#: class-gf-mailchimp.php:778
+#: class-gf-mailchimp.php:783
 msgid "If"
 msgstr ""
 
-#: class-gf-mailchimp.php:892
+#: class-gf-mailchimp.php:897
 msgid "Abusing this may cause your MailChimp account to be suspended."
 msgstr ""
 
-#: class-gf-mailchimp.php:923
+#: class-gf-mailchimp.php:928
 msgid "Unable to process feed because API could not be initialized."
 msgstr ""
 
-#: class-gf-mailchimp.php:938
+#: class-gf-mailchimp.php:943
 msgid "A valid Email address must be provided."
 msgstr ""
 
-#: class-gf-mailchimp.php:1020
+#: class-gf-mailchimp.php:1057
 msgid "Unable to check if email address is already used by a member: %s"
 msgstr ""
 
-#: class-gf-mailchimp.php:1217
+#: class-gf-mailchimp.php:1251
 msgid "Unable to add/update subscriber: %s"
 msgstr ""
 
-#: class-gf-mailchimp.php:1242
+#: class-gf-mailchimp.php:1276
 msgid "Unable to add note to subscriber: %s"
 msgstr ""
 
@@ -175,7 +175,7 @@ msgid "Gravity Forms MailChimp Add-On"
 msgstr ""
 
 #. Plugin URI of the plugin/theme
-msgid "http://www.gravityforms.com"
+msgid "https://www.gravityforms.com"
 msgstr ""
 
 #. Description of the plugin/theme
@@ -189,5 +189,5 @@ msgid "rocketgenius"
 msgstr ""
 
 #. Author URI of the plugin/theme
-msgid "http://www.rocketgenius.com"
+msgid "https://www.rocketgenius.com"
 msgstr ""
