@@ -234,7 +234,7 @@ class GF_MailChimp_API {
 	 * @param string $method     Request method. Defaults to GET.
 	 * @param string $return_key Array key from response to return. Defaults to null (return full response).
 	 *
-	 * @throws Exception if API request returns an error, exception is thrown.
+	 * @throws GF_MailChimp_Exception If API request returns an error, exception is thrown.
 	 *
 	 * @return array
 	 */
@@ -261,7 +261,21 @@ class GF_MailChimp_API {
 				'Authorization' => 'Basic ' . base64_encode( ':' . $this->api_key ),
 				'Content-Type'  => 'application/json',
 			),
+			/**
+			 * Filters if SSL verification should occur.
+			 *
+			 * @param bool false If the SSL certificate should be verified. Defalts to false.
+			 *
+			 * @return bool
+			 */
 			'sslverify' => apply_filters( 'https_local_ssl_verify', false ),
+			/**
+			 * Sets the HTTP timeout, in seconds, for the request.
+			 *
+			 * @param int 30 The timeout limit, in seconds. Defalts to 30.
+			 *
+			 * @return int
+			 */
 			'timeout'   => apply_filters( 'http_request_timeout', 30 ),
 		);
 
@@ -270,7 +284,14 @@ class GF_MailChimp_API {
 			$args['body'] = json_encode( $data );
 		}
 
-		// Filter request arguments.
+		/**
+		 * Filters the MailChimp request arguments.
+		 *
+		 * @param array  $args The request arguments sent to MailChimp.
+		 * @param string $path The request path.
+		 *
+		 * @return array
+		 */
 		$args = apply_filters( 'gform_mailchimp_request_args', $args, $path );
 
 		// Get request response.
