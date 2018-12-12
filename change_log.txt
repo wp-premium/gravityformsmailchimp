@@ -1,4 +1,8 @@
-4.3 | 2018-03-27
+# 4.4 | 2018-10-29
+   - Added support for MailChimp contact tags.
+
+
+# 4.3 | 2018-03-27
    - Added security enhancements.
    - Added GPL to plugin header.
    - Updated API library to public property in support of MailChimp block.

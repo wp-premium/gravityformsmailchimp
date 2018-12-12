@@ -403,6 +403,17 @@ class GFMailChimp extends GFFeedAddOn {
 						),
 					),
 					array(
+						'name'  => 'tags',
+						'type'  => 'text',
+						'class' => 'medium merge-tag-support mt-position-right mt-hide_all_fields',
+						'label' => esc_html__( 'Tags', 'gravityformsmailchimp' ),
+						'tooltip'       => sprintf(
+							'<h6>%s</h6>%s',
+							esc_html__( 'Tags', 'gravityformsmailchimp' ),
+							esc_html__( 'Associate tags to your MailChimp contacts with a comma separated list. (e.g. new lead, Gravity Forms, web source)', 'gravityformsmailchimp' )
+						),
+					),
+					array(
 						'name'  => 'note',
 						'type'  => 'textarea',
 						'class' => 'medium merge-tag-support mt-position-right mt-hide_all_fields',
@@ -1150,6 +1161,24 @@ class GFMailChimp extends GFFeedAddOn {
 
 		}
 
+		// Get tags.
+		$tags = explode(',', rgars( $feed, 'meta/tags' ) );
+		$tags = array_map( 'trim', $tags );
+
+		// Prepare tags.
+		if ( ! empty( $tags ) ) {
+
+			// Loop through tags, replace merge tags.
+			foreach ( $tags as &$tag ) {
+				$tag = GFCommon::replace_variables( $tag, $form, $entry, false, false, false, 'text' );
+				$tag = trim( $tag );
+			}
+
+			// Remove empty tags.
+			$tags = array_filter( $tags );
+
+		}
+
 		// If member status is not defined or is anything other than pending, set to subscribed.
 		$member_status = isset( $member_status ) && $member_status === 'pending' ? $member_status : 'subscribed';
 
@@ -1166,6 +1195,11 @@ class GFMailChimp extends GFFeedAddOn {
 			'vip'          => rgars( $feed, 'meta/markAsVIP' ) ? true : false,
 			'note'         => rgars( $feed, 'meta/note' ),
 		);
+
+		// Add tags to subscription.
+		if ( ! empty( $tags ) ) {
+			$subscription['tags'] = $tags;
+		}
 
 		// Prepare transaction type for filter.
 		$transaction = $member_found ? 'Update' : 'Subscribe';
