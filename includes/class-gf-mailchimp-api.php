@@ -54,9 +54,10 @@ class GF_MailChimp_API {
 	 * @since  4.0
 	 * @access public
 	 *
-	 * @uses GF_MailChimp_API::process_request()
+	 * @uses   GF_MailChimp_API::process_request()
 	 *
 	 * @return array
+	 * @throws GF_MailChimp_Exception|Exception
 	 */
 	public function account_details() {
 
@@ -73,9 +74,10 @@ class GF_MailChimp_API {
 	 * @param string $list_id     MailChimp list ID.
 	 * @param string $category_id Interest category ID.
 	 *
-	 * @uses GF_MailChimp_API::process_request()
+	 * @uses   GF_MailChimp_API::process_request()
 	 *
 	 * @return array
+	 * @throws GF_MailChimp_Exception|Exception
 	 */
 	public function get_interest_category_interests( $list_id, $category_id ) {
 
@@ -91,9 +93,10 @@ class GF_MailChimp_API {
 	 *
 	 * @param string $list_id MailChimp list ID.
 	 *
-	 * @uses GF_MailChimp_API::process_request()
+	 * @uses   GF_MailChimp_API::process_request()
 	 *
 	 * @return array
+	 * @throws Exception
 	 */
 	public function get_list( $list_id ) {
 
@@ -109,9 +112,10 @@ class GF_MailChimp_API {
 	 *
 	 * @param array $params List request parameters.
 	 *
-	 * @uses GF_MailChimp_API::process_request()
+	 * @uses   GF_MailChimp_API::process_request()
 	 *
 	 * @return array
+	 * @throws GF_MailChimp_Exception|Exception
 	 */
 	public function get_lists( $params ) {
 
@@ -127,9 +131,10 @@ class GF_MailChimp_API {
 	 *
 	 * @param string $list_id MailChimp list ID.
 	 *
-	 * @uses GF_MailChimp_API::process_request()
+	 * @uses   GF_MailChimp_API::process_request()
 	 *
 	 * @return array
+	 * @throws GF_MailChimp_Exception|Exception
 	 */
 	public function get_list_interest_categories( $list_id ) {
 
@@ -146,9 +151,10 @@ class GF_MailChimp_API {
 	 * @param string $list_id       MailChimp list ID.
 	 * @param string $email_address Email address.
 	 *
-	 * @uses GF_MailChimp_API::process_request()
+	 * @uses   GF_MailChimp_API::process_request()
 	 *
 	 * @return array
+	 * @throws GF_MailChimp_Exception|Exception
 	 */
 	public function get_list_member( $list_id, $email_address ) {
 
@@ -167,9 +173,10 @@ class GF_MailChimp_API {
 	 *
 	 * @param string $list_id MailChimp list ID.
 	 *
-	 * @uses GF_MailChimp_API::process_request()
+	 * @uses   GF_MailChimp_API::process_request()
 	 *
 	 * @return array
+	 * @throws GF_MailChimp_Exception|Exception
 	 */
 	public function get_list_merge_fields( $list_id ) {
 
@@ -187,9 +194,10 @@ class GF_MailChimp_API {
 	 * @param string $email_address Email address.
 	 * @param array  $subscription  Subscription details.
 	 *
-	 * @uses GF_MailChimp_API::process_request()
+	 * @uses   GF_MailChimp_API::process_request()
 	 *
 	 * @return array
+	 * @throws GF_MailChimp_Exception|Exception
 	 */
 	public function update_list_member( $list_id, $email_address, $subscription ) {
 
@@ -197,6 +205,30 @@ class GF_MailChimp_API {
 		$subscriber_hash = md5( strtolower( $email_address ) );
 
 		return $this->process_request( 'lists/' . $list_id . '/members/' . $subscriber_hash, $subscription, 'PUT' );
+
+	}
+
+	/**
+	 * Update tags for a MailChimp list member.
+	 *
+	 * @since  Unknown
+	 * @access public
+	 *
+	 * @param string $list_id       MailChimp list ID.
+	 * @param string $email_address Email address.
+	 * @param array  $tags          Member tags.
+	 *
+	 * @uses   GF_MailChimp_API::process_request()
+	 *
+	 * @return array
+	 * @throws GF_MailChimp_Exception|Exception
+	 */
+	public function update_member_tags( $list_id, $email_address, $tags ) {
+
+		// Prepare subscriber hash.
+		$subscriber_hash = md5( strtolower( $email_address ) );
+
+		return $this->process_request( 'lists/' . $list_id . '/members/' . $subscriber_hash . '/tags', array( 'tags' => $tags ), 'POST' );
 
 	}
 
@@ -210,9 +242,10 @@ class GF_MailChimp_API {
 	 * @param string $email_address Email address.
 	 * @param string $note          The note to be added to the member.
 	 *
-	 * @uses GF_MailChimp_API::process_request()
+	 * @uses   GF_MailChimp_API::process_request()
 	 *
 	 * @return array
+	 * @throws GF_MailChimp_Exception|Exception
 	 */
 	public function add_member_note( $list_id, $email_address, $note ) {
 
@@ -234,7 +267,7 @@ class GF_MailChimp_API {
 	 * @param string $method     Request method. Defaults to GET.
 	 * @param string $return_key Array key from response to return. Defaults to null (return full response).
 	 *
-	 * @throws GF_MailChimp_Exception If API request returns an error, exception is thrown.
+	 * @throws GF_MailChimp_Exception|Exception If API request returns an error, exception is thrown.
 	 *
 	 * @return array
 	 */
@@ -308,7 +341,7 @@ class GF_MailChimp_API {
 		// Get the response code.
 		$response_code = wp_remote_retrieve_response_code( $response );
 
-		if ( $response_code != 200 ) {
+		if ( ! in_array( $response_code, array( 200, 204 ) ) ) {
 
 			// If status code is set, throw exception.
 			if ( isset( $response['body']['status'] ) && isset( $response['body']['title'] ) ) {
