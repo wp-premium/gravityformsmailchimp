@@ -1,9 +1,9 @@
 # Copyright 2009-2018 Rocketgenius, Inc.
 msgid ""
 msgstr ""
-"Project-Id-Version: Gravity Forms MailChimp Add-On 4.4\n"
+"Project-Id-Version: Gravity Forms MailChimp Add-On 4.5\n"
 "Report-Msgid-Bugs-To: https://www.gravtiyforms.com\n"
-"POT-Creation-Date: 2018-10-29 19:28:36+00:00\n"
+"POT-Creation-Date: 2018-12-19 13:46:11+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -109,8 +109,9 @@ msgstr ""
 
 #: class-gf-mailchimp.php:413
 msgid ""
-"Associate tags to your MailChimp contacts with a comma separated list. "
-"(e.g. new lead, Gravity Forms, web source)"
+"Associate tags to your MailChimp contacts with a comma separated list (e.g. "
+"new lead, Gravity Forms, web source). Commas within a merge tag value will "
+"be created as a single tag."
 msgstr ""
 
 #: class-gf-mailchimp.php:420
@@ -172,11 +173,15 @@ msgstr ""
 msgid "Unable to check if email address is already used by a member: %s"
 msgstr ""
 
-#: class-gf-mailchimp.php:1285
+#: class-gf-mailchimp.php:1300
 msgid "Unable to add/update subscriber: %s"
 msgstr ""
 
-#: class-gf-mailchimp.php:1310
+#: class-gf-mailchimp.php:1325
+msgid "Unable to add/update subscriber tags: %s"
+msgstr ""
+
+#: class-gf-mailchimp.php:1343
 msgid "Unable to add note to subscriber: %s"
 msgstr ""
 
