@@ -66,6 +66,29 @@ class GF_MailChimp_API {
 	}
 
 	/**
+	 * Delete a specific MailChimp list member.
+	 *
+	 * @since  4.6
+	 * @access public
+	 *
+	 * @param string $list_id       MailChimp list ID.
+	 * @param string $email_address Email address.
+	 *
+	 * @uses   GF_MailChimp_API::process_request()
+	 *
+	 * @return array
+	 * @throws GF_MailChimp_Exception|Exception
+	 */
+	public function delete_list_member( $list_id, $email_address ) {
+
+		// Prepare subscriber hash.
+		$subscriber_hash = md5( strtolower( $email_address ) );
+
+		return $this->process_request( 'lists/' . $list_id . '/members/' . $subscriber_hash, array(), 'DELETE' );
+
+	}
+
+	/**
 	 * Get all interests for an interest category.
 	 *
 	 * @since  4.0
@@ -162,6 +185,26 @@ class GF_MailChimp_API {
 		$subscriber_hash = md5( strtolower( $email_address ) );
 
 		return $this->process_request( 'lists/' . $list_id . '/members/' . $subscriber_hash );
+
+	}
+
+	/**
+	 * Get MailChimp list members.
+	 *
+	 * @since  4.6
+	 * @access public
+	 *
+	 * @param string $list_id MailChimp list ID.
+	 * @param array  $options Additional settings.
+	 *
+	 * @uses   GF_MailChimp_API::process_request()
+	 *
+	 * @return array
+	 * @throws GF_MailChimp_Exception|Exception
+	 */
+	public function get_list_members( $list_id, $options = array() ) {
+
+		return $this->process_request( 'lists/' . $list_id . '/members', $options );
 
 	}
 

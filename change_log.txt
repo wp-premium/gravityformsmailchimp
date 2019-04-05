@@ -1,3 +1,7 @@
+# 4.6 | 2019-03-22
+   - Added support for Marketing Permissions (GDPR) fields.
+
+
 # 4.5 | 2018-12-19
    - Fixed new tags not being added when updating existing list member.
 
