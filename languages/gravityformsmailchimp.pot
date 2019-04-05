@@ -1,13 +1,13 @@
-# Copyright 2009-2018 Rocketgenius, Inc.
+# Copyright 2009-2019 Rocketgenius, Inc.
 msgid ""
 msgstr ""
-"Project-Id-Version: Gravity Forms MailChimp Add-On 4.5\n"
+"Project-Id-Version: Gravity Forms MailChimp Add-On 4.6\n"
 "Report-Msgid-Bugs-To: https://www.gravtiyforms.com\n"
-"POT-Creation-Date: 2018-12-19 13:46:11+00:00\n"
+"POT-Creation-Date: 2019-03-22 14:18:33+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2018-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: 2019-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Rocketgenius <customerservice@rocketgenius.com>\n"
 "Language-Team: Rocketgenius <customerservice@rocketgenius.com>\n"
 "X-Generator: Gravity Forms Build Server\n"
@@ -46,7 +46,7 @@ msgid "MailChimp Feed Settings"
 msgstr ""
 
 #: class-gf-mailchimp.php:335 class-gf-mailchimp.php:341
-#: class-gf-mailchimp.php:639
+#: class-gf-mailchimp.php:681
 msgid "Name"
 msgstr ""
 
@@ -55,7 +55,7 @@ msgid "Enter a feed name to uniquely identify this setup."
 msgstr ""
 
 #: class-gf-mailchimp.php:347 class-gf-mailchimp.php:352
-#: class-gf-mailchimp.php:640
+#: class-gf-mailchimp.php:682
 msgid "MailChimp List"
 msgstr ""
 
@@ -129,59 +129,87 @@ msgid ""
 "submissions will be exported."
 msgstr ""
 
-#: class-gf-mailchimp.php:492 class-gf-mailchimp.php:505
+#: class-gf-mailchimp.php:454 class-gf-mailchimp.php:458
+msgid "Marketing Permissions"
+msgstr ""
+
+#: class-gf-mailchimp.php:459
+msgid ""
+"When enabled and conditions are met, users will be opted into your "
+"MailChimp list marketing permissions. If a user is already subscribed to "
+"your list, they will not be opted out of permissions they are already opted "
+"into."
+msgstr ""
+
+#: class-gf-mailchimp.php:534 class-gf-mailchimp.php:547
 msgid "Could not load MailChimp contact lists. %sError: %s"
 msgstr ""
 
-#: class-gf-mailchimp.php:505
+#: class-gf-mailchimp.php:547
 msgid "No lists found."
 msgstr ""
 
-#: class-gf-mailchimp.php:517
+#: class-gf-mailchimp.php:559
 msgid "Select a MailChimp List"
 msgstr ""
 
-#: class-gf-mailchimp.php:563
+#: class-gf-mailchimp.php:605
 msgid "Email Address"
 msgstr ""
 
-#: class-gf-mailchimp.php:781
+#: class-gf-mailchimp.php:823
 msgid "Assign to group:"
 msgstr ""
 
-#: class-gf-mailchimp.php:790
+#: class-gf-mailchimp.php:832
 msgid "Always"
 msgstr ""
 
-#: class-gf-mailchimp.php:794
+#: class-gf-mailchimp.php:836
 msgid "If"
 msgstr ""
 
-#: class-gf-mailchimp.php:908
+#: class-gf-mailchimp.php:882
+msgid ""
+"You must have at least one list subscriber to configure Marketing "
+"Permissions."
+msgstr ""
+
+#: class-gf-mailchimp.php:883
+msgid ""
+"Due to limitations with MailChimp's API, we are only able to get available "
+"Marketing Permissions when the selected list has at least one subscriber."
+msgstr ""
+
+#: class-gf-mailchimp.php:960
+msgid "Enable permission if:"
+msgstr ""
+
+#: class-gf-mailchimp.php:1069
 msgid "Abusing this may cause your MailChimp account to be suspended."
 msgstr ""
 
-#: class-gf-mailchimp.php:939
+#: class-gf-mailchimp.php:1100
 msgid "Unable to process feed because API could not be initialized."
 msgstr ""
 
-#: class-gf-mailchimp.php:954
+#: class-gf-mailchimp.php:1115
 msgid "A valid Email address must be provided."
 msgstr ""
 
-#: class-gf-mailchimp.php:1068
+#: class-gf-mailchimp.php:1229
 msgid "Unable to check if email address is already used by a member: %s"
 msgstr ""
 
-#: class-gf-mailchimp.php:1300
+#: class-gf-mailchimp.php:1506
 msgid "Unable to add/update subscriber: %s"
 msgstr ""
 
-#: class-gf-mailchimp.php:1325
+#: class-gf-mailchimp.php:1531
 msgid "Unable to add/update subscriber tags: %s"
 msgstr ""
 
-#: class-gf-mailchimp.php:1343
+#: class-gf-mailchimp.php:1549
 msgid "Unable to add note to subscriber: %s"
 msgstr ""
 

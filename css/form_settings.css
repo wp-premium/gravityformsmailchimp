@@ -6,9 +6,33 @@
 	margin: 5px 0 0 0;
 }
 
-.gaddon-mailchimp-category .gf_animate_sub_settings {
+.gaddon-mailchimp-permission-toggle {
+	margin-bottom: 5px;
+}
+
+.gaddon-mailchimp-category .gf_animate_sub_settings,
+.gaddon-mailchimp-permission .gf_animate_sub_settings {
 	padding-left: 10px;
 }
+
+.gaddon-mailchimp-permission:not( :first-child ) {
+	margin-top: 5px;
+}
+
+.gaddon-mailchimp-permission .gaddon-setting-checkbox:first-child {
+	margin-top: 0;
+}
+
+.gaddon-mailchimp-permission .condition_container {
+	margin-bottom: 10px;
+	margin-top: 5px;
+}
+
+.gaddon-mailchimp-permission .condition_label {
+	display: inline-block;
+	margin-bottom: 5px;
+}
+
 .gaddon-mailchimp-category {
 	padding-bottom: 12px;
 }
