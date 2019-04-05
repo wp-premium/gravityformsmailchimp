@@ -326,7 +326,7 @@ class GFMailChimp extends GFFeedAddOn {
 	 */
 	public function feed_settings_fields() {
 
-		return array(
+		$settings = array(
 			array(
 				'title'  => esc_html__( 'MailChimp Feed Settings', 'gravityformsmailchimp' ),
 				'fields' => array(
@@ -433,6 +433,48 @@ class GFMailChimp extends GFFeedAddOn {
 				),
 			),
 		);
+
+		// Get currently selected list.
+		$list = $this->get_setting( 'mailchimpList' );
+
+		// If a list is selected, get marketing permissions and add setting.
+		if ( $list ) {
+
+			try {
+
+				// Get MailChimp list,
+				$list = $this->api->get_list( $list );
+
+				// If marketing permissions are enabled for list, add setting.
+				if ( rgar( $list, 'marketing_permissions' ) ) {
+
+					// Prepare setting.
+					$setting = array(
+						'name'    => 'marketingPermissions',
+						'label'   => esc_html__( 'Marketing Permissions', 'gravityformsmailchimp' ),
+						'type'    => 'marketing_permissions',
+						'tooltip' => sprintf(
+							'<h6>%s</h6>%s',
+							esc_html__( 'Marketing Permissions', 'gravityformsmailchimp' ),
+							esc_html__( 'When enabled and conditions are met, users will be opted into your MailChimp list marketing permissions. If a user is already subscribed to your list, they will not be opted out of permissions they are already opted into.', 'gravityformsmailchimp' )
+						),
+					);
+
+					// Add setting.
+					$settings = $this->add_field_after( 'interestCategories', $setting, $settings );
+
+				}
+
+			} catch ( Exception $e ) {
+
+				// Log that list could not be retrieved.
+				$this->log_error( __METHOD__ . '(): Unable to add Marketing Permissions field because list could not be retrieved; ' . $e->getMessage() );
+
+			}
+
+		}
+
+		return $settings;
 
 	}
 
@@ -688,7 +730,7 @@ class GFMailChimp extends GFFeedAddOn {
 	 * @param array $field The field properties.
 	 * @param bool  $echo  Should the setting markup be echoed.
 	 *
-	 * @return string|void
+	 * @return string
 	 */
 	public function settings_interest_categories( $field, $echo = true ) {
 
@@ -698,7 +740,7 @@ class GFMailChimp extends GFFeedAddOn {
 		// If no categories are found, return.
 		if ( empty( $categories ) ) {
 			$this->log_debug( __METHOD__ . '(): No categories found.' );
-			return;
+			return '';
 		}
 
 		// Start field markup.
@@ -816,6 +858,121 @@ class GFMailChimp extends GFFeedAddOn {
 	}
 
 	/**
+	 * Define the markup for the Marketing Permissions feed settings field.
+	 *
+	 * @since  4.6
+	 * @access public
+	 *
+	 * @param array $field The field properties.
+	 * @param bool  $echo  Should the setting markup be echoed.
+	 *
+	 * @return string
+	 */
+	public function settings_marketing_permissions( $field, $echo = true ) {
+
+		// Get current list.
+		$list = $this->get_setting( 'mailchimpList' );
+
+		// Get marketing permissions.
+		$permissions = $this->get_marketing_permissions( $list );
+
+		// If permissions are not available, display error message.
+		if ( ! $permissions ) {
+
+			$html = esc_html__( 'You must have at least one list subscriber to configure Marketing Permissions.', 'gravityformsmailchimp' );
+			$html .= '&nbsp;' . gform_tooltip( esc_html__( "Due to limitations with MailChimp's API, we are only able to get available Marketing Permissions when the selected list has at least one subscriber.", 'gravityformsmailchimp' ), '', true );
+
+			if ( $echo ) {
+				echo $html;
+			}
+
+			return $html;
+
+		}
+
+		// Start field markup.
+		$html = "<div id='gaddon-mailchimp_marketing_permissions'>";
+
+		// Loop through marketing permissions, add conditional logic for each.
+		foreach ( $permissions as $permission ) {
+
+			// Prepare permission key.
+			$permission_key = $field['name'] . '_' . $permission['marketing_permission_id'];
+
+			// Open category container.
+			$html .= '<div class="gaddon-mailchimp-permission">';
+
+			// Display toggle checkbox.
+			$html .= $this->settings_checkbox(
+				array(
+					'name'    => esc_html( $permission['marketing_permission_id'] ),
+					'type'    => 'checkbox',
+					'choices' => array(
+						array(
+							'name'    => $permission_key . '_enabled',
+							'label'   => esc_html( $permission['text'] ),
+							'class'   => 'gaddon-mailchimp-permission-toggle',
+							'onclick' => "if(this.checked){jQuery('#{$permission_key}_condition_container').slideDown();} else{jQuery('#{$permission_key}_condition_container').slideUp();}",
+						),
+					),
+				),
+				false
+			);
+
+			// Display condition field for permission.
+			$html .= $this->marketing_permissions_condition( $permission_key );
+
+			$html .= '</div>';
+
+		}
+
+		$html .= '</div>';
+
+		if ( $echo ) {
+			echo $html;
+		}
+
+		return $html;
+
+	}
+
+	/**
+	 * Define the markup for the Marketing Permissions conditional logic.
+	 *
+	 * @since  4.6
+	 * @access public
+	 *
+	 * @param string $setting_name_root The category setting key.
+	 *
+	 * @return string
+	 */
+	public function marketing_permissions_condition( $setting_name_root ) {
+
+		$condition_enabled_setting = "{$setting_name_root}_enabled";
+		$is_enabled                = '1' === $this->get_setting( $condition_enabled_setting );
+		$container_style           = ! $is_enabled ? "style='display:none;'" : '';
+
+		$str = sprintf(
+			'<div id="%s_condition_container" %s class="condition_container gf_animate_sub_settings"><span id="%s_condition_label" class="condition_label">%s</span>',
+			$setting_name_root,
+			$container_style,
+			$setting_name_root,
+			esc_html__( 'Enable permission if:', 'gravityformsmailchimp' )
+		);
+
+
+		$str .= '   <span id="' . $setting_name_root . '_decision_container"><br />' .
+				$this->simple_condition( $setting_name_root, $is_enabled ) .
+				'   </span>' .
+
+				'</div>';
+
+		return $str;
+
+	}
+
+
+	/**
 	 * Define which field types can be used for the group conditional logic.
 	 *
 	 * @since  3.0
@@ -837,7 +994,11 @@ class GFMailChimp extends GFFeedAddOn {
 		// Get the current form.
 		$form = $this->get_current_form();
 
-		// Loop through the form fields.
+		/**
+		 * Loop through the form fields.
+		 *
+		 * @var GF_Field $field
+		 */
 		foreach ( $form['fields'] as $field ) {
 
 			// If this field does not support conditional logic, skip it.
@@ -1140,7 +1301,7 @@ class GFMailChimp extends GFFeedAddOn {
 		}
 
 		// Get interest categories.
-		$categories = $this->get_feed_interest_categories( $feed );
+		$categories = $this->get_feed_setting_conditions( $feed );
 
 		// Loop through categories.
 		foreach ( $categories as $category_id => $category_meta ) {
@@ -1275,6 +1436,51 @@ class GFMailChimp extends GFFeedAddOn {
 		unset( $subscription['tags'] );
 		foreach ( $tags as &$tag ) {
 			$tag = array( 'name' => $tag, 'status' => 'active' );
+		}
+
+		// Add Marketing Permissions.
+		if ( $permissions = $this->get_feed_setting_conditions( $feed, 'marketingPermissions' ) ) {
+
+			// If member already exists, only update newly enabled permissions.
+			if ( $member_found ) {
+
+				// Loop through existing Marketing Permissions, check condition.
+				foreach ( $member['marketing_permissions'] as $existing_permission ) {
+
+					// If permission is already enabled, keep it that way.
+					if ( $existing_permission['enabled'] ) {
+						$subscription['marketing_permissions'][] = $existing_permission;
+						continue;
+					}
+
+					// If this permission is not configured, skip.
+					if ( ! rgar( $permissions, $existing_permission['marketing_permission_id'] ) ) {
+						continue;
+					}
+
+					// Check condition and add to subscription.
+					$subscription['marketing_permissions'][] = array(
+						'marketing_permission_id' => $existing_permission['marketing_permission_id'],
+						'enabled'                 => $this->is_marketing_permission_condition_met( $permissions[ $existing_permission['marketing_permission_id'] ], $form, $entry ),
+					);
+
+				}
+
+			} else {
+
+				// Loop through permissions, add if enabled.
+				foreach ( $permissions as $permission_id => $permission ) {
+
+					// Add to subscription.
+					$subscription['marketing_permissions'][] = array(
+						'marketing_permission_id' => $permission_id,
+						'enabled'                 => $this->is_marketing_permission_condition_met( $permission, $form, $entry ),
+					);
+
+				}
+
+			}
+
 		}
 
 		// Remove note from the subscription object and process any merge tags.
@@ -1512,7 +1718,7 @@ class GFMailChimp extends GFFeedAddOn {
 	 */
 	public function initialize_api( $api_key = null ) {
 
-		// If API is alredy initialized, return true.
+		// If API is already initialized, return true.
 		if ( ! is_null( $this->api ) ) {
 			return true;
 		}
@@ -1608,6 +1814,103 @@ class GFMailChimp extends GFFeedAddOn {
 	}
 
 	/**
+	 * Get available marketing permissions for a list.
+	 *
+	 * @since 4.6
+	 * @access public
+	 *
+	 * @param string $list_id MailChimp List ID.
+	 *
+	 * @return array|bool
+	 */
+	private function get_marketing_permissions( $list_id ) {
+
+		$cache_key = 'gravityformsmailchimp_permissions_' . $list_id;
+
+		// Check cache for permissions.
+		if ( $permissions = GFCache::get( $cache_key ) ) {
+			return $permissions;
+		}
+
+		try {
+
+			// Get MailChimp list.
+			$list = $this->api->get_list( $list_id );
+
+		} catch ( Exception $e ) {
+
+			// Log that list could not be retrieved.
+			$this->log_error( __METHOD__ . '(): Unable to get marketing permissions because list could not be retrieved; ' . $e->getMessage() );
+
+			return false;
+
+		}
+
+		// If marketing permissions are disabled, return.
+		if ( ! rgar( $list, 'marketing_permissions' ) ) {
+			return false;
+		}
+
+		try {
+
+			// Get a list member.
+			$members = $this->api->get_list_members( $list_id, array( 'count' => 1 ) );
+			$member  = rgar( $members, 'members' ) ? $members['members'][0] : false;
+
+
+		} catch ( Exception $e ) {
+
+			// Log that list could not be retrieved.
+			$this->log_error( __METHOD__ . '(): Unable to get marketing permissions because list members could not be retrieved; ' . $e->getMessage() );
+
+			return false;
+
+		}
+
+		// If list has no members, create one.
+		if ( ! $member ) {
+
+			try {
+
+				// Prepare member parameters.
+				$member_params = array(
+					'email_address' => 'mailchimp@gravityforms.com',
+					'status'        => 'subscribed',
+				);
+
+				// Add member to list.
+				$member = $this->api->update_list_member( $list_id, $member_params['email_address'], $member_params );
+
+				// Delete member.
+				$this->api->delete_list_member( $list_id, $member_params['email_address'] );
+
+			} catch ( Exception $e ) {
+
+				// Log that we could not create test member.
+				$this->log_error( __METHOD__ . '(): Unable to create test list member to retrieve marketing permissions; ' . $e->getMessage() );
+
+				return false;
+
+			}
+
+		}
+
+		// Get marketing permissions from first member.
+		$permissions = $member['marketing_permissions'];
+
+		// Loop through permissions, remove enabled flag.
+		foreach ( $permissions as $i => $permission ) {
+			unset( $permissions[ $i ]['enabled'] );
+		}
+
+		// Cache permissions.
+		GFCache::set( $cache_key, $permissions, true, 5 * MINUTE_IN_SECONDS );
+
+		return $permissions;
+
+	}
+
+	/**
 	 * Determines if MailChimp list has any defined interest categories.
 	 *
 	 * @since  4.0
@@ -1625,56 +1928,57 @@ class GFMailChimp extends GFFeedAddOn {
 	}
 
 	/**
-	 * Retrieve the enabled interest categories for a feed.
+	 * Retrieve the enabled conditions for a feed.
 	 *
+	 * @since  4.6 Update to be more generic to support marketing permissions.
 	 * @since  4.0
-	 * @access public
 	 *
-	 * @param array $feed    The feed object.
-	 * @param bool  $enabled Return only enabled categories. Defaults to true.
+	 * @param array  $feed    The feed object.
+	 * @param string $name    The feed setting to get conditions for.
+	 * @param bool   $enabled Return only enabled categories. Defaults to true.
 	 *
 	 * @return array
 	 */
-	public function get_feed_interest_categories( $feed, $enabled = true ) {
+	public function get_feed_setting_conditions( $feed, $name = 'interestCategory', $enabled = true ) {
 
-		// Initialize categories array.
-		$categories = array();
+		// Initialize conditions array.
+		$conditions = array();
 
 		// Loop through feed meta.
 		foreach ( $feed['meta'] as $key => $value ) {
 
-			// If this is not an interest category, skip it.
-			if ( 0 !== strpos( $key, 'interestCategory_' ) ) {
+			// If this is not the setting we're looking for, skip.
+			if ( 0 !== strpos( $key, $name . '_' ) ) {
 				continue;
 			}
 
 			// Explode the meta key.
 			$key = explode( '_', $key );
 
-			// Add value to categories array.
-			$categories[ $key[1] ][ $key[2] ] = $value;
+			// Add value to conditions array.
+			$conditions[ $key[1] ][ $key[2] ] = $value;
 
 		}
 
-		// If we are only returning enabled categories, remove disabled categories.
+		// If we are only returning enabled conditions, remove disabled conditions.
 		if ( $enabled ) {
 
-			// Loop through categories.
-			foreach ( $categories as $category_id => $category_meta ) {
+			// Loop through conditions.
+			foreach ( $conditions as $condition_id => $condition_meta ) {
 
-				// If category is enabled, skip it.
-				if ( '1' == $category_meta['enabled'] ) {
+				// If condition is enabled, skip it.
+				if ( '1' == $condition_meta['enabled'] ) {
 					continue;
 				}
 
-				// Remove category.
-				unset( $categories[ $category_id ] );
+				// Remove condition.
+				unset( $conditions[ $condition_id ] );
 
 			}
 
 		}
 
-		return $categories;
+		return $conditions;
 
 	}
 
@@ -1724,6 +2028,47 @@ class GFMailChimp extends GFFeedAddOn {
 			$is_value_match = GFFormsModel::is_value_match( $field_value, $category['value'], $category['operator'] );
 
 			$this->log_debug( __METHOD__ . "(): Add to interest category if field #{$category['field']} value {$category['operator']} '{$category['value']}'. Is value match? " . var_export( $is_value_match, 1 ) );
+
+			return $is_value_match;
+
+		}
+
+	}
+
+
+	/**
+	 * Determine if the Marketing Permission should be enabled for user.
+	 *
+	 * @since  4.6
+	 * @access public
+	 *
+	 * @param array $permission The Marketing Permission properties.
+	 * @param array $form       The form currently being processed.
+	 * @param array $entry      The entry currently being processed.
+	 *
+	 * @return bool
+	 */
+	public function is_marketing_permission_condition_met( $permission, $form, $entry ) {
+
+		if ( ! $permission['enabled'] ) {
+			$this->log_debug( __METHOD__ . '(): Marketing Permission not enabled. Returning false.' );
+			return false;
+		}
+
+		// Get field.
+		$field = GFFormsModel::get_field( $form, $permission['field'] );
+
+		if ( ! is_object( $field ) ) {
+
+			$this->log_debug( __METHOD__ . "(): Field #{$permission['field']} not found. Returning true." );
+			return true;
+
+		} else {
+
+			$field_value    = GFFormsModel::get_lead_field_value( $entry, $field );
+			$is_value_match = GFFormsModel::is_value_match( $field_value, $permission['value'], $permission['operator'] );
+
+			$this->log_debug( __METHOD__ . "(): Enable Marketing Permission if field #{$permission['field']} value {$permission['operator']} '{$permission['value']}'. Is value match? " . var_export( $is_value_match, 1 ) );
 
 			return $is_value_match;
 
