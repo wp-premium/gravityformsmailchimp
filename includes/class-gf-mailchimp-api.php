@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Gravity Forms MailChimp API Library.
+ * Gravity Forms Mailchimp API Library.
  *
  * @since     4.0
  * @package   GravityForms
@@ -11,20 +11,20 @@
 class GF_MailChimp_API {
 
 	/**
-	 * MailChimp account API key.
+	 * Mailchimp account API key.
 	 *
 	 * @since  4.0
 	 * @access protected
-	 * @var    string $api_key MailChimp account API key.
+	 * @var    string $api_key Mailchimp account API key.
 	 */
 	protected $api_key;
 
 	/**
-	 * MailChimp account data center.
+	 * Mailchimp account data center.
 	 *
 	 * @since  4.0
 	 * @access protected
-	 * @var    string $data_center MailChimp account data center.
+	 * @var    string $data_center Mailchimp account data center.
 	 */
 	protected $data_center;
 
@@ -34,7 +34,7 @@ class GF_MailChimp_API {
 	 * @since  4.0
 	 * @access public
 	 *
-	 * @param string $api_key (default: '') MailChimp API key.
+	 * @param string $api_key (default: '') Mailchimp API key.
 	 *
 	 * @uses GF_MailChimp_API::set_data_center()
 	 */
@@ -66,12 +66,12 @@ class GF_MailChimp_API {
 	}
 
 	/**
-	 * Delete a specific MailChimp list member.
+	 * Delete a specific Mailchimp list/audience member.
 	 *
 	 * @since  4.6
 	 * @access public
 	 *
-	 * @param string $list_id       MailChimp list ID.
+	 * @param string $list_id       Mailchimp list/audience ID.
 	 * @param string $email_address Email address.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
@@ -94,7 +94,7 @@ class GF_MailChimp_API {
 	 * @since  4.0
 	 * @access public
 	 *
-	 * @param string $list_id     MailChimp list ID.
+	 * @param string $list_id     Mailchimp list/audience ID.
 	 * @param string $category_id Interest category ID.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
@@ -109,12 +109,12 @@ class GF_MailChimp_API {
 	}
 
 	/**
-	 * Get a specific MailChimp list.
+	 * Get a specific Mailchimp list/audience.
 	 *
 	 * @since  4.0
 	 * @access public
 	 *
-	 * @param string $list_id MailChimp list ID.
+	 * @param string $list_id Mailchimp list/audience ID.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
 	 *
@@ -128,12 +128,12 @@ class GF_MailChimp_API {
 	}
 
 	/**
-	 * Get all MailChimp lists.
+	 * Get all Mailchimp lists.
 	 *
 	 * @since  4.0
 	 * @access public
 	 *
-	 * @param array $params List request parameters.
+	 * @param array $params List/Audience request parameters.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
 	 *
@@ -147,12 +147,12 @@ class GF_MailChimp_API {
 	}
 
 	/**
-	 * Get all interest categories for a MailChimp list.
+	 * Get all interest categories for a Mailchimp list/audience.
 	 *
 	 * @since  4.0
 	 * @access public
 	 *
-	 * @param string $list_id MailChimp list ID.
+	 * @param string $list_id Mailchimp list/audience ID.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
 	 *
@@ -166,12 +166,12 @@ class GF_MailChimp_API {
 	}
 
 	/**
-	 * Get a specific MailChimp list member.
+	 * Get a specific Mailchimp list/audience member.
 	 *
 	 * @since  4.0
 	 * @access public
 	 *
-	 * @param string $list_id       MailChimp list ID.
+	 * @param string $list_id       Mailchimp list/audience ID.
 	 * @param string $email_address Email address.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
@@ -189,12 +189,12 @@ class GF_MailChimp_API {
 	}
 
 	/**
-	 * Get MailChimp list members.
+	 * Get Mailchimp list/audience members.
 	 *
 	 * @since  4.6
 	 * @access public
 	 *
-	 * @param string $list_id MailChimp list ID.
+	 * @param string $list_id Mailchimp list/audience ID.
 	 * @param array  $options Additional settings.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
@@ -209,12 +209,12 @@ class GF_MailChimp_API {
 	}
 
 	/**
-	 * Get all merge fields for a MailChimp list.
+	 * Get all merge fields for a Mailchimp list/audience.
 	 *
 	 * @since  4.0
 	 * @access public
 	 *
-	 * @param string $list_id MailChimp list ID.
+	 * @param string $list_id Mailchimp list/audience ID.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
 	 *
@@ -228,12 +228,12 @@ class GF_MailChimp_API {
 	}
 
 	/**
-	 * Add or update a MailChimp list member.
+	 * Add or update a Mailchimp list/audience member.
 	 *
 	 * @since  4.0
 	 * @access public
 	 *
-	 * @param string $list_id       MailChimp list ID.
+	 * @param string $list_id       Mailchimp list/audience ID.
 	 * @param string $email_address Email address.
 	 * @param array  $subscription  Subscription details.
 	 *
@@ -252,12 +252,12 @@ class GF_MailChimp_API {
 	}
 
 	/**
-	 * Update tags for a MailChimp list member.
+	 * Update tags for a Mailchimp list/audience member.
 	 *
 	 * @since  Unknown
 	 * @access public
 	 *
-	 * @param string $list_id       MailChimp list ID.
+	 * @param string $list_id       Mailchimp list/audience ID.
 	 * @param string $email_address Email address.
 	 * @param array  $tags          Member tags.
 	 *
@@ -276,12 +276,12 @@ class GF_MailChimp_API {
 	}
 
 	/**
-	 * Add a note to the MailChimp list member.
+	 * Add a note to the Mailchimp list/audience member.
 	 *
 	 * @since  4.0.10
 	 * @access public
 	 *
-	 * @param string $list_id       MailChimp list ID.
+	 * @param string $list_id       Mailchimp list/audience ID.
 	 * @param string $email_address Email address.
 	 * @param string $note          The note to be added to the member.
 	 *
@@ -300,7 +300,7 @@ class GF_MailChimp_API {
 	}
 
 	/**
-	 * Process MailChimp API request.
+	 * Process Mailchimp API request.
 	 *
 	 * @since  4.0
 	 * @access private
@@ -348,11 +348,12 @@ class GF_MailChimp_API {
 			/**
 			 * Sets the HTTP timeout, in seconds, for the request.
 			 *
-			 * @param int 30 The timeout limit, in seconds. Defalts to 30.
+			 * @param int    30           The timeout limit, in seconds. Defaults to 30.
+			 * @param string $request_url The request URL.
 			 *
 			 * @return int
 			 */
-			'timeout'   => apply_filters( 'http_request_timeout', 30 ),
+			'timeout'   => apply_filters( 'http_request_timeout', 30, $request_url ),
 		);
 
 		// Add data to arguments if needed.
@@ -361,9 +362,9 @@ class GF_MailChimp_API {
 		}
 
 		/**
-		 * Filters the MailChimp request arguments.
+		 * Filters the Mailchimp request arguments.
 		 *
-		 * @param array  $args The request arguments sent to MailChimp.
+		 * @param array  $args The request arguments sent to Mailchimp.
 		 * @param string $path The request path.
 		 *
 		 * @return array
@@ -444,7 +445,7 @@ class GF_MailChimp_API {
 }
 
 /**
- * Gravity Forms MailChimp Exception.
+ * Gravity Forms Mailchimp Exception.
  *
  * @since     4.0.3
  * @package   GravityForms

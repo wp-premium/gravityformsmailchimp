@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 GFForms::include_feed_addon_framework();
 
 /**
- * Gravity Forms MailChimp Add-On.
+ * Gravity Forms Mailchimp Add-On.
  *
  * @since     1.0
  * @package   GravityForms
@@ -87,7 +87,7 @@ class GFMailChimp extends GFFeedAddOn {
 	 * @access protected
 	 * @var    string $_title The title of the Add-On.
 	 */
-	protected $_title = 'Gravity Forms MailChimp Add-On';
+	protected $_title = 'Gravity Forms Mailchimp Add-On';
 
 	/**
 	 * Defines the short title of the Add-On.
@@ -96,7 +96,7 @@ class GFMailChimp extends GFFeedAddOn {
 	 * @access protected
 	 * @var    string $_short_title The short title.
 	 */
-	protected $_short_title = 'MailChimp';
+	protected $_short_title = 'Mailchimp';
 
 	/**
 	 * Defines if Add-On should use Gravity Forms servers for update data.
@@ -144,20 +144,20 @@ class GFMailChimp extends GFFeedAddOn {
 	protected $_capabilities_uninstall = 'gravityforms_mailchimp_uninstall';
 
 	/**
-	 * Defines the MailChimp list field tag name.
+	 * Defines the Mailchimp list/audience field tag name.
 	 *
 	 * @since  3.7
 	 * @access protected
-	 * @var    string $merge_var_name The MailChimp list field tag name; used by gform_mailchimp_field_value.
+	 * @var    string $merge_var_name The Mailchimp list/audience field tag name; used by gform_mailchimp_field_value.
 	 */
 	protected $merge_var_name = '';
 
 	/**
-	 * Defines the MailChimp merge fields used in the current request.
+	 * Defines the Mailchimp merge fields used in the current request.
 	 *
 	 * @since  4.2.4
 	 * @access protected
-	 * @var    array $merge_fields The MailChimp merge fields used in the current request.
+	 * @var    array $merge_fields The Mailchimp merge fields used in the current request.
 	 */
 	protected $merge_fields = array();
 
@@ -202,7 +202,7 @@ class GFMailChimp extends GFFeedAddOn {
 
 		if ( $this->is_gravityforms_supported() ) {
 
-			// Load the MailChimp API library.
+			// Load the Mailchimp API library.
 			if ( ! class_exists( 'GF_MailChimp_API' ) ) {
 				require_once( 'includes/class-gf-mailchimp-api.php' );
 			}
@@ -225,7 +225,7 @@ class GFMailChimp extends GFFeedAddOn {
 
 		$this->add_delayed_payment_support(
 			array(
-				'option_label' => esc_html__( 'Subscribe user to MailChimp only when payment is received.', 'gravityformsmailchimp' ),
+				'option_label' => esc_html__( 'Subscribe user to Mailchimp only when payment is received.', 'gravityformsmailchimp' ),
 			)
 		);
 
@@ -256,11 +256,12 @@ class GFMailChimp extends GFFeedAddOn {
 	 * @return array
 	 */
 	public function styles() {
+		$min = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG || isset( $_GET['gform_debug'] ) ? '' : '.min';
 
 		$styles = array(
 			array(
 				'handle'  => $this->_slug . '_form_settings',
-				'src'     => $this->get_base_url() . '/css/form_settings.css',
+				'src'     => $this->get_base_url() . "/css/form_settings{$min}.css",
 				'version' => $this->_version,
 				'enqueue' => array(
 					array( 'admin_page' => array( 'form_settings' ) ),
@@ -269,6 +270,19 @@ class GFMailChimp extends GFFeedAddOn {
 		);
 
 		return array_merge( parent::styles(), $styles );
+
+	}
+
+	/**
+	 * Return the plugin's icon for the plugin/form settings menu.
+	 *
+	 * @since 4.7
+	 *
+	 * @return string
+	 */
+	public function get_menu_icon() {
+
+		return file_get_contents( $this->get_base_path() . '/images/menu-icon.svg' );
 
 	}
 
@@ -292,14 +306,14 @@ class GFMailChimp extends GFFeedAddOn {
 			array(
 				'description' => '<p>' .
 					sprintf(
-						esc_html__( 'MailChimp makes it easy to send email newsletters to your customers, manage your subscriber lists, and track campaign performance. Use Gravity Forms to collect customer information and automatically add it to your MailChimp subscriber list. If you don\'t have a MailChimp account, you can %1$ssign up for one here.%2$s', 'gravityformsmailchimp' ),
+						esc_html__( 'Mailchimp makes it easy to send email newsletters to your customers, manage your subscriber audiences, and track campaign performance. Use Gravity Forms to collect customer information and automatically add it to your Mailchimp subscriber audience. If you don\'t have a Mailchimp account, you can %1$ssign up for one here.%2$s', 'gravityformsmailchimp' ),
 						'<a href="http://www.mailchimp.com/" target="_blank">', '</a>'
 					)
 					. '</p>',
 				'fields'      => array(
 					array(
 						'name'              => 'apiKey',
-						'label'             => esc_html__( 'MailChimp API Key', 'gravityformsmailchimp' ),
+						'label'             => esc_html__( 'Mailchimp API Key', 'gravityformsmailchimp' ),
 						'type'              => 'text',
 						'class'             => 'medium',
 						'feedback_callback' => array( $this, 'initialize_api' ),
@@ -328,7 +342,7 @@ class GFMailChimp extends GFFeedAddOn {
 
 		$settings = array(
 			array(
-				'title'  => esc_html__( 'MailChimp Feed Settings', 'gravityformsmailchimp' ),
+				'title'  => esc_html__( 'Mailchimp Feed Settings', 'gravityformsmailchimp' ),
 				'fields' => array(
 					array(
 						'name'     => 'feedName',
@@ -344,13 +358,13 @@ class GFMailChimp extends GFFeedAddOn {
 					),
 					array(
 						'name'     => 'mailchimpList',
-						'label'    => esc_html__( 'MailChimp List', 'gravityformsmailchimp' ),
+						'label'    => esc_html__( 'Mailchimp Audience', 'gravityformsmailchimp' ),
 						'type'     => 'mailchimp_list',
 						'required' => true,
 						'tooltip'  => sprintf(
 							'<h6>%s</h6>%s',
-							esc_html__( 'MailChimp List', 'gravityformsmailchimp' ),
-							esc_html__( 'Select the MailChimp list you would like to add your contacts to.', 'gravityformsmailchimp' )
+							esc_html__( 'Mailchimp Audience', 'gravityformsmailchimp' ),
+							esc_html__( 'Select the Mailchimp audience you would like to add your contacts to.', 'gravityformsmailchimp' )
 						),
 					),
 				),
@@ -366,7 +380,7 @@ class GFMailChimp extends GFFeedAddOn {
 						'tooltip'   => sprintf(
 							'<h6>%s</h6>%s',
 							esc_html__( 'Map Fields', 'gravityformsmailchimp' ),
-							esc_html__( 'Associate your MailChimp merge tags to the appropriate Gravity Form fields by selecting the appropriate form field from the list.', 'gravityformsmailchimp' )
+							esc_html__( 'Associate your Mailchimp merge tags to the appropriate Gravity Form fields by selecting the appropriate form field from the list.', 'gravityformsmailchimp' )
 						),
 					),
 					array(
@@ -377,7 +391,7 @@ class GFMailChimp extends GFFeedAddOn {
 						'tooltip'    => sprintf(
 							'<h6>%s</h6>%s',
 							esc_html__( 'Groups', 'gravityformsmailchimp' ),
-							esc_html__( 'When one or more groups are enabled, users will be assigned to the groups in addition to being subscribed to the MailChimp list. When disabled, users will not be assigned to groups.', 'gravityformsmailchimp' )
+							esc_html__( 'When one or more groups are enabled, users will be assigned to the groups in addition to being subscribed to the Mailchimp audience. When disabled, users will not be assigned to groups.', 'gravityformsmailchimp' )
 						),
 					),
 					array(
@@ -393,7 +407,7 @@ class GFMailChimp extends GFFeedAddOn {
 								'tooltip'       => sprintf(
 									'<h6>%s</h6>%s',
 									esc_html__( 'Double Opt-In', 'gravityformsmailchimp' ),
-									esc_html__( 'When the double opt-in option is enabled, MailChimp will send a confirmation email to the user and will only add them to your MailChimp list upon confirmation.', 'gravityformsmailchimp' )
+									esc_html__( 'When the double opt-in option is enabled, Mailchimp will send a confirmation email to the user and will only add them to your Mailchimp audience upon confirmation.', 'gravityformsmailchimp' )
 								),
 							),
 							array(
@@ -410,7 +424,7 @@ class GFMailChimp extends GFFeedAddOn {
 						'tooltip'       => sprintf(
 							'<h6>%s</h6>%s',
 							esc_html__( 'Tags', 'gravityformsmailchimp' ),
-							esc_html__( 'Associate tags to your MailChimp contacts with a comma separated list (e.g. new lead, Gravity Forms, web source). Commas within a merge tag value will be created as a single tag.', 'gravityformsmailchimp' )
+							esc_html__( 'Associate tags to your Mailchimp contacts with a comma separated list (e.g. new lead, Gravity Forms, web source). Commas within a merge tag value will be created as a single tag.', 'gravityformsmailchimp' )
 						),
 					),
 					array(
@@ -426,7 +440,7 @@ class GFMailChimp extends GFFeedAddOn {
 						'tooltip' => sprintf(
 							'<h6>%s</h6>%s',
 							esc_html__( 'Conditional Logic', 'gravityformsmailchimp' ),
-							esc_html__( 'When conditional logic is enabled, form submissions will only be exported to MailChimp when the conditions are met. When disabled all form submissions will be exported.', 'gravityformsmailchimp' )
+							esc_html__( 'When conditional logic is enabled, form submissions will only be exported to Mailchimp when the conditions are met. When disabled all form submissions will be exported.', 'gravityformsmailchimp' )
 						),
 					),
 					array( 'type' => 'save' ),
@@ -434,18 +448,18 @@ class GFMailChimp extends GFFeedAddOn {
 			),
 		);
 
-		// Get currently selected list.
+		// Get currently selected list/audience.
 		$list = $this->get_setting( 'mailchimpList' );
 
-		// If a list is selected, get marketing permissions and add setting.
+		// If a list/audience is selected, get marketing permissions and add setting.
 		if ( $list ) {
 
 			try {
 
-				// Get MailChimp list,
+				// Get Mailchimp list/audience,
 				$list = $this->api->get_list( $list );
 
-				// If marketing permissions are enabled for list, add setting.
+				// If marketing permissions are enabled for list/audience, add setting.
 				if ( rgar( $list, 'marketing_permissions' ) ) {
 
 					// Prepare setting.
@@ -456,7 +470,7 @@ class GFMailChimp extends GFFeedAddOn {
 						'tooltip' => sprintf(
 							'<h6>%s</h6>%s',
 							esc_html__( 'Marketing Permissions', 'gravityformsmailchimp' ),
-							esc_html__( 'When enabled and conditions are met, users will be opted into your MailChimp list marketing permissions. If a user is already subscribed to your list, they will not be opted out of permissions they are already opted into.', 'gravityformsmailchimp' )
+							esc_html__( 'When enabled and conditions are met, users will be opted into your Mailchimp audience marketing permissions. If a user is already subscribed to your audience, they will not be opted out of permissions they are already opted into.', 'gravityformsmailchimp' )
 						),
 					);
 
@@ -467,8 +481,8 @@ class GFMailChimp extends GFFeedAddOn {
 
 			} catch ( Exception $e ) {
 
-				// Log that list could not be retrieved.
-				$this->log_error( __METHOD__ . '(): Unable to add Marketing Permissions field because list could not be retrieved; ' . $e->getMessage() );
+				// Log that list/audience could not be retrieved.
+				$this->log_error( __METHOD__ . '(): Unable to add Marketing Permissions field because audience could not be retrieved; ' . $e->getMessage() );
 
 			}
 
@@ -499,7 +513,7 @@ class GFMailChimp extends GFFeedAddOn {
 			return $html;
 		}
 
-		// Prepare list request parameters.
+		// Prepare list/audience request parameters.
 		$params = array( 'start' => 0, 'limit' => 100 );
 
 		// Filter parameters.
@@ -519,52 +533,52 @@ class GFMailChimp extends GFFeedAddOn {
 
 		try {
 
-			// Log contact lists request parameters.
-			$this->log_debug( __METHOD__ . '(): Retrieving contact lists; params: ' . print_r( $params, true ) );
+			// Log contact lists/audiences request parameters.
+			$this->log_debug( __METHOD__ . '(): Retrieving contact audiences; params: ' . print_r( $params, true ) );
 
-			// Get lists.
+			// Get lists/audiences.
 			$lists = $this->api->get_lists( $params );
 
 		} catch ( Exception $e ) {
 
-			// Log that contact lists could not be obtained.
-			$this->log_error( __METHOD__ . '(): Could not retrieve MailChimp contact lists; ' . $e->getMessage() );
+			// Log that contact lists/audiences could not be obtained.
+			$this->log_error( __METHOD__ . '(): Could not retrieve Mailchimp contact audiences; ' . $e->getMessage() );
 
 			// Display error message.
-			printf( esc_html__( 'Could not load MailChimp contact lists. %sError: %s', 'gravityformsmailchimp' ), '<br/>', $e->getMessage() );
+			printf( esc_html__( 'Could not load Mailchimp contact audiences. %sError: %s', 'gravityformsmailchimp' ), '<br/>', $e->getMessage() );
 
 			return;
 
 		}
 
-		// If no lists were found, display error message.
+		// If no lists/audiences were found, display error message.
 		if ( 0 === $lists['total_items'] ) {
 
-			// Log that no lists were found.
-			$this->log_error( __METHOD__ . '(): Could not load MailChimp contact lists; no lists found.' );
+			// Log that no lists/audiences were found.
+			$this->log_error( __METHOD__ . '(): Could not load Mailchimp contact audiences; no audiences found.' );
 
 			// Display error message.
-			printf( esc_html__( 'Could not load MailChimp contact lists. %sError: %s', 'gravityformsmailchimp' ), '<br/>', esc_html__( 'No lists found.', 'gravityformsmailchimp' ) );
+			printf( esc_html__( 'Could not load Mailchimp contact audiences. %sError: %s', 'gravityformsmailchimp' ), '<br/>', esc_html__( 'No audiences found.', 'gravityformsmailchimp' ) );
 
 			return;
 
 		}
 
-		// Log number of lists retrieved.
-		$this->log_debug( __METHOD__ . '(): Number of lists: ' . count( $lists['lists'] ) );
+		// Log number of lists/audiences retrieved.
+		$this->log_debug( __METHOD__ . '(): Number of audiences: ' . count( $lists['lists'] ) );
 
 		// Initialize select options.
 		$options = array(
 			array(
-				'label' => esc_html__( 'Select a MailChimp List', 'gravityformsmailchimp' ),
+				'label' => esc_html__( 'Select a Mailchimp Audience', 'gravityformsmailchimp' ),
 				'value' => '',
 			),
 		);
 
-		// Loop through MailChimp lists.
+		// Loop through Mailchimp lists/audiences.
 		foreach ( $lists['lists'] as $list ) {
 
-			// Add list to select options.
+			// Add list/audience to select options.
 			$options[] = array(
 				'label' => esc_html( $list['name'] ),
 				'value' => esc_attr( $list['id'] ),
@@ -589,7 +603,7 @@ class GFMailChimp extends GFFeedAddOn {
 	}
 
 	/**
-	 * Return an array of MailChimp list fields which can be mapped to the Form fields/entry meta.
+	 * Return an array of Mailchimp list/audience fields which can be mapped to the Form fields/entry meta.
 	 *
 	 * @since  3.0
 	 * @access public
@@ -613,7 +627,7 @@ class GFMailChimp extends GFFeedAddOn {
 			return $field_map;
 		}
 
-		// Get current list ID.
+		// Get current list/audience ID.
 		$list_id = $this->get_setting( 'mailchimpList' );
 
 		// Get merge fields.
@@ -668,6 +682,21 @@ class GFMailChimp extends GFFeedAddOn {
 	}
 
 	/**
+	 * Allow the feed to be duplicated.
+	 *
+	 * @since 4.7
+	 *
+	 * @param array|int $id The ID of the feed to be duplicated or the feed object when duplicating a form.
+	 *
+	 * @return bool
+	 */
+	public function can_duplicate_feed( $id ) {
+
+		return true;
+
+	}
+
+	/**
 	 * Configures which columns should be displayed on the feed list page.
 	 *
 	 * @since  3.0
@@ -679,42 +708,42 @@ class GFMailChimp extends GFFeedAddOn {
 
 		return array(
 			'feedName'            => esc_html__( 'Name', 'gravityformsmailchimp' ),
-			'mailchimp_list_name' => esc_html__( 'MailChimp List', 'gravityformsmailchimp' ),
+			'mailchimp_list_name' => esc_html__( 'Mailchimp List', 'gravityformsmailchimp' ),
 		);
 
 	}
 
 	/**
-	 * Returns the value to be displayed in the MailChimp List column.
+	 * Returns the value to be displayed in the Mailchimp List/Audience column.
 	 *
 	 * @since  3.0
 	 * @access public
 	 *
-	 * @param array $feed The feed being included in the feed list.
+	 * @param array $feed The feed being included in the feed list/audience.
 	 *
 	 * @return string
 	 */
 	public function get_column_value_mailchimp_list_name( $feed ) {
 
-		// If unable to initialize API, return the list ID.
+		// If unable to initialize API, return the list/audience ID.
 		if ( ! $this->initialize_api() ) {
 			return rgars( $feed, 'meta/mailchimpList' );
 		}
 
 		try {
 
-			// Get list.
+			// Get list/audience.
 			$list = $this->api->get_list( rgars( $feed, 'meta/mailchimpList' ) );
 
-			// Return list name.
+			// Return list/audience name.
 			return rgar( $list, 'name' );
 
 		} catch ( Exception $e ) {
 
 			// Log error.
-			$this->log_error( __METHOD__ . '(): Unable to get MailChimp list for feed list; ' . $e->getMessage() );
+			$this->log_error( __METHOD__ . '(): Unable to get Mailchimp audience for feed list; ' . $e->getMessage() );
 
-			// Return list ID.
+			// Return list/audience ID.
 			return rgars( $feed, 'meta/mailchimpList' );
 
 		}
@@ -847,7 +876,7 @@ class GFMailChimp extends GFFeedAddOn {
 
 		$conditional_style = $decision == 'always' ? "style='display:none;'" : '';
 
-		$str .= '   <span id="' . $setting_name_root . '_decision_container" ' . $conditional_style . '><br />' .
+		$str .= '   <span id="' . $setting_name_root . '_decision_container" class="gform-settings-simple-condition" ' . $conditional_style . '><br />' .
 		        $this->simple_condition( $setting_name_root, $is_enabled ) .
 		        '   </span>' .
 
@@ -870,7 +899,7 @@ class GFMailChimp extends GFFeedAddOn {
 	 */
 	public function settings_marketing_permissions( $field, $echo = true ) {
 
-		// Get current list.
+		// Get current list/audience.
 		$list = $this->get_setting( 'mailchimpList' );
 
 		// Get marketing permissions.
@@ -879,8 +908,8 @@ class GFMailChimp extends GFFeedAddOn {
 		// If permissions are not available, display error message.
 		if ( ! $permissions ) {
 
-			$html = esc_html__( 'You must have at least one list subscriber to configure Marketing Permissions.', 'gravityformsmailchimp' );
-			$html .= '&nbsp;' . gform_tooltip( esc_html__( "Due to limitations with MailChimp's API, we are only able to get available Marketing Permissions when the selected list has at least one subscriber.", 'gravityformsmailchimp' ), '', true );
+			$html = esc_html__( 'You must have at least one audience subscriber to configure Marketing Permissions.', 'gravityformsmailchimp' );
+			$html .= '&nbsp;' . gform_tooltip( esc_html__( "Due to limitations with Mailchimp's API, we are only able to get available Marketing Permissions when the selected audience has at least one subscriber.", 'gravityformsmailchimp' ), '', true );
 
 			if ( $echo ) {
 				echo $html;
@@ -961,7 +990,7 @@ class GFMailChimp extends GFFeedAddOn {
 		);
 
 
-		$str .= '   <span id="' . $setting_name_root . '_decision_container"><br />' .
+		$str .= '   <span id="' . $setting_name_root . '_decision_container" class="gform-settings-simple-condition"><br />' .
 				$this->simple_condition( $setting_name_root, $is_enabled ) .
 				'   </span>' .
 
@@ -1066,7 +1095,7 @@ class GFMailChimp extends GFFeedAddOn {
 		$display = $value ? 'none' : 'block-inline';
 
 		// Add warning to checkbox markup.
-		$markup .= '<span id="mailchimp_doubleoptin_warning" style="padding-left: 10px; font-size: 10px; display:' . $display . '">(' . esc_html__( 'Abusing this may cause your MailChimp account to be suspended.', 'gravityformsmailchimp' ) . ')</span>';
+		$markup .= '<span id="mailchimp_doubleoptin_warning" style="padding-left: 10px; font-size: 10px; display:' . $display . '">(' . esc_html__( 'Abusing this may cause your Mailchimp account to be suspended.', 'gravityformsmailchimp' ) . ')</span>';
 
 		return $markup;
 
@@ -1079,7 +1108,7 @@ class GFMailChimp extends GFFeedAddOn {
 	// # FEED PROCESSING -----------------------------------------------------------------------------------------------
 
 	/**
-	 * Process the feed, subscribe the user to the list.
+	 * Process the feed, subscribe the user to the list/audience.
 	 *
 	 * @since  3.0
 	 * @access public
@@ -1117,7 +1146,7 @@ class GFMailChimp extends GFFeedAddOn {
 		}
 
 		/**
-		 * Prevent empty form fields erasing values already stored in the mapped MailChimp MMERGE fields
+		 * Prevent empty form fields erasing values already stored in the mapped Mailchimp MMERGE fields
 		 * when updating an existing subscriber.
 		 *
 		 * @param bool  $override If the merge field should be overridden.
@@ -1178,9 +1207,6 @@ class GFMailChimp extends GFFeedAddOn {
 				switch( $date_format ) {
 
 					case 'DD/MM':
-						$field_value = date( 'd/m', $field_value_timestamp );
-						break;
-
 					case 'MM/DD':
 						$field_value = date( 'm/d', $field_value_timestamp );
 						break;
@@ -1205,8 +1231,8 @@ class GFMailChimp extends GFFeedAddOn {
 
 		try {
 
-			// Log that we are checking if user is already subscribed to list.
-			$this->log_debug( __METHOD__ . "(): Checking to see if $email is already on the list." );
+			// Log that we are checking if user is already subscribed to list/audience.
+			$this->log_debug( __METHOD__ . "(): Checking to see if $email is already on the audience." );
 
 			// Get member info.
 			$member = $this->api->get_list_member( $feed['meta']['mailchimpList'], $email );
@@ -1218,7 +1244,7 @@ class GFMailChimp extends GFFeedAddOn {
 			$member_status = $member['status'];
 
 			// Log member status.
-			$this->log_debug( __METHOD__ . "(): $email was found on list. Status: $member_status" );
+			$this->log_debug( __METHOD__ . "(): $email was found on audience. Status: $member_status" );
 
 		} catch ( Exception $e ) {
 
@@ -1233,12 +1259,12 @@ class GFMailChimp extends GFFeedAddOn {
 			}
 
 			// Log member status.
-			$this->log_debug( __METHOD__ . "(): $email was not found on list." );
+			$this->log_debug( __METHOD__ . "(): $email was not found on audience." );
 
 		}
 
 		/**
-		 * Modify whether a user that currently has a status of unsubscribed on your list is resubscribed.
+		 * Modify whether a user that currently has a status of unsubscribed on your list/audience is resubscribed.
 		 * By default, the user is resubscribed.
 		 *
 		 * @param bool  $allow_resubscription If the user should be resubscribed.
@@ -1255,7 +1281,7 @@ class GFMailChimp extends GFFeedAddOn {
 		}
 
 		/**
-		 * Modify whether a user that is already subscribed to your list has their groups replaced when submitting the form a second time.
+		 * Modify whether a user that is already subscribed to your list/audience has their groups replaced when submitting the form a second time.
 		 *
 		 * @since 1.9
 		 *
@@ -1394,7 +1420,7 @@ class GFMailChimp extends GFFeedAddOn {
 		$subscription['status'] = $subscription['double_optin'] ? 'pending' : $subscription['status'];
 		unset( $subscription['double_optin'] );
 
-		// Extract list ID.
+		// Extract list/audience ID.
 		$list_id = $subscription['id'];
 		unset( $subscription['id'] );
 
@@ -1408,11 +1434,11 @@ class GFMailChimp extends GFFeedAddOn {
 		 * @since 4.1.9 Added existing member object as $member parameter.
 		 *
 		 * @param array       $subscription Subscription arguments.
-		 * @param string      $list_id      MailChimp list ID.
+		 * @param string      $list_id      Mailchimp list/audience ID.
 		 * @param array       $form         The form object.
 		 * @param array       $entry        The entry object.
 		 * @param array       $feed         The feed object.
-		 * @param array|false $member       The existing member object. (False if member does not currently exist in MailChimp.)
+		 * @param array|false $member       The existing member object. (False if member does not currently exist in Mailchimp.)
 		 */
 		$subscription = gf_apply_filters( array( 'gform_mailchimp_subscription', $form['id'] ), $subscription, $list_id, $form, $entry, $feed, $member );
 
@@ -1646,7 +1672,7 @@ class GFMailChimp extends GFFeedAddOn {
 						// Get field value.
 						$field_value = rgar( $entry, $field_id );
 
-						// Reformat standard format phone to match MailChimp format.
+						// Reformat standard format phone to match Mailchimp format.
 						// Format: NPA-NXX-LINE (404-555-1212) when US/CAN.
 						if ( ! empty( $field_value ) && preg_match( '/^\D?(\d{3})\D?\D?(\d{3})\D?(\d{4})$/', $field_value, $matches ) ) {
 							$field_value = sprintf( '%s-%s-%s', $matches[1], $matches[2], $matches[3] );
@@ -1702,12 +1728,12 @@ class GFMailChimp extends GFFeedAddOn {
 	// # HELPERS -------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Initializes MailChimp API if credentials are valid.
+	 * Initializes Mailchimp API if credentials are valid.
 	 *
 	 * @since  4.0
 	 * @access public
 	 *
-	 * @param string $api_key MailChimp API key.
+	 * @param string $api_key Mailchimp API key.
 	 *
 	 * @uses GFAddOn::get_plugin_setting()
 	 * @uses GFAddOn::log_debug()
@@ -1736,7 +1762,7 @@ class GFMailChimp extends GFFeedAddOn {
 		// Log validation step.
 		$this->log_debug( __METHOD__ . '(): Validating API Info.' );
 
-		// Setup a new MailChimp object with the API credentials.
+		// Setup a new Mailchimp object with the API credentials.
 		$mc = new GF_MailChimp_API( $api_key );
 
 		try {
@@ -1748,14 +1774,14 @@ class GFMailChimp extends GFFeedAddOn {
 			$this->api = $mc;
 
 			// Log that authentication test passed.
-			$this->log_debug( __METHOD__ . '(): MailChimp successfully authenticated.' );
+			$this->log_debug( __METHOD__ . '(): Mailchimp successfully authenticated.' );
 
 			return true;
 
 		} catch ( Exception $e ) {
 
 			// Log that authentication test failed.
-			$this->log_error( __METHOD__ . '(): Unable to authenticate with MailChimp; '. $e->getMessage() );
+			$this->log_error( __METHOD__ . '(): Unable to authenticate with Mailchimp; '. $e->getMessage() );
 
 			return false;
 
@@ -1764,12 +1790,12 @@ class GFMailChimp extends GFFeedAddOn {
 	}
 
 	/**
-	 * Retrieve the interest groups for the list.
+	 * Retrieve the interest groups for the list/audience.
 	 *
 	 * @since  4.0
 	 * @access public
 	 *
-	 * @param string $list_id MailChimp list ID.
+	 * @param string $list_id Mailchimp list/audience ID.
 	 *
 	 * @return array|bool
 	 */
@@ -1780,16 +1806,16 @@ class GFMailChimp extends GFFeedAddOn {
 			return false;
 		}
 
-		// Get MailChimp list ID.
+		// Get Mailchimp list/audience ID.
 		if ( rgblank( $list_id ) ) {
 			$list_id = $this->get_setting( 'mailchimpList' );
 		}
 
-		// If MailChimp list ID is not defined, return.
+		// If Mailchimp list/audience ID is not defined, return.
 		if ( rgblank( $list_id ) ) {
 
-			// Log that list ID was not defined.
-			$this->log_error( __METHOD__ . '(): Could not get MailChimp interest categories because list ID was not defined.' );
+			// Log that list/audience ID was not defined.
+			$this->log_error( __METHOD__ . '(): Could not get Mailchimp interest categories because audience ID was not defined.' );
 
 			return false;
 
@@ -1803,7 +1829,7 @@ class GFMailChimp extends GFFeedAddOn {
 		} catch ( Exception $e ) {
 
 			// Log error.
-			$this->log_error( __METHOD__ . '(): Unable to get interest categories for list "' . $list_id . '"; ' . $e->getMessage() );
+			$this->log_error( __METHOD__ . '(): Unable to get interest categories for audience "' . $list_id . '"; ' . $e->getMessage() );
 
 			return array();
 
@@ -1814,12 +1840,12 @@ class GFMailChimp extends GFFeedAddOn {
 	}
 
 	/**
-	 * Get available marketing permissions for a list.
+	 * Get available marketing permissions for a list/audience.
 	 *
 	 * @since 4.6
 	 * @access public
 	 *
-	 * @param string $list_id MailChimp List ID.
+	 * @param string $list_id Mailchimp List/Audience ID.
 	 *
 	 * @return array|bool
 	 */
@@ -1834,13 +1860,13 @@ class GFMailChimp extends GFFeedAddOn {
 
 		try {
 
-			// Get MailChimp list.
+			// Get Mailchimp list/audience.
 			$list = $this->api->get_list( $list_id );
 
 		} catch ( Exception $e ) {
 
-			// Log that list could not be retrieved.
-			$this->log_error( __METHOD__ . '(): Unable to get marketing permissions because list could not be retrieved; ' . $e->getMessage() );
+			// Log that list/audience could not be retrieved.
+			$this->log_error( __METHOD__ . '(): Unable to get marketing permissions because audience could not be retrieved; ' . $e->getMessage() );
 
 			return false;
 
@@ -1853,21 +1879,21 @@ class GFMailChimp extends GFFeedAddOn {
 
 		try {
 
-			// Get a list member.
+			// Get a list/audience member.
 			$members = $this->api->get_list_members( $list_id, array( 'count' => 1 ) );
 			$member  = rgar( $members, 'members' ) ? $members['members'][0] : false;
 
 
 		} catch ( Exception $e ) {
 
-			// Log that list could not be retrieved.
-			$this->log_error( __METHOD__ . '(): Unable to get marketing permissions because list members could not be retrieved; ' . $e->getMessage() );
+			// Log that list/audience could not be retrieved.
+			$this->log_error( __METHOD__ . '(): Unable to get marketing permissions because audience members could not be retrieved; ' . $e->getMessage() );
 
 			return false;
 
 		}
 
-		// If list has no members, create one.
+		// If list/audience has no members, create one.
 		if ( ! $member ) {
 
 			try {
@@ -1878,7 +1904,7 @@ class GFMailChimp extends GFFeedAddOn {
 					'status'        => 'subscribed',
 				);
 
-				// Add member to list.
+				// Add member to list/audience.
 				$member = $this->api->update_list_member( $list_id, $member_params['email_address'], $member_params );
 
 				// Delete member.
@@ -1887,7 +1913,7 @@ class GFMailChimp extends GFFeedAddOn {
 			} catch ( Exception $e ) {
 
 				// Log that we could not create test member.
-				$this->log_error( __METHOD__ . '(): Unable to create test list member to retrieve marketing permissions; ' . $e->getMessage() );
+				$this->log_error( __METHOD__ . '(): Unable to create test audience member to retrieve marketing permissions; ' . $e->getMessage() );
 
 				return false;
 
@@ -1911,7 +1937,7 @@ class GFMailChimp extends GFFeedAddOn {
 	}
 
 	/**
-	 * Determines if MailChimp list has any defined interest categories.
+	 * Determines if Mailchimp list/audience has any defined interest categories.
 	 *
 	 * @since  4.0
 	 * @access public
@@ -2078,9 +2104,9 @@ class GFMailChimp extends GFFeedAddOn {
 
 	/**
 	 * Returns the combined value of the specified Address field.
-	 * Street 2 and Country are the only inputs not required by MailChimp.
-	 * If other inputs are missing MailChimp will not store the field value, we will pass a hyphen when an input is empty.
-	 * MailChimp requires the inputs be delimited by 2 spaces.
+	 * Street 2 and Country are the only inputs not required by Mailchimp.
+	 * If other inputs are missing Mailchimp will not store the field value, we will pass a hyphen when an input is empty.
+	 * Mailchimp requires the inputs be delimited by 2 spaces.
 	 *
 	 * @since  3.0
 	 * @access public
@@ -2123,12 +2149,12 @@ class GFMailChimp extends GFFeedAddOn {
 	}
 
 	/**
-	 * Get MailChimp merge fields for list.
+	 * Get Mailchimp merge fields for list/audience.
 	 *
 	 * @since  4.2.4
 	 * @access public
 	 *
-	 * @param string $list_id List ID to get merge fields for.
+	 * @param string $list_id List/Audience ID to get merge fields for.
 	 *
 	 * @uses GFMailChimp::initialize_api()
 	 * @uses GF_MailChimp_API::get_list_merge_fields()
@@ -2137,7 +2163,7 @@ class GFMailChimp extends GFFeedAddOn {
 	 */
 	public function get_list_merge_fields( $list_id = '' ) {
 
-		// If no list ID was provided or if API cannot be initialized, return.
+		// If no list/audience ID was provided or if API cannot be initialized, return.
 		if ( rgblank( $list_id ) || ! $this->initialize_api() ) {
 			return array();
 		}
@@ -2155,7 +2181,7 @@ class GFMailChimp extends GFFeedAddOn {
 		} catch ( Exception $e ) {
 
 			// Log error.
-			$this->log_error( __METHOD__ . '(): Unable to get merge fields for MailChimp list; ' . $e->getMessage() );
+			$this->log_error( __METHOD__ . '(): Unable to get merge fields for Mailchimp audience; ' . $e->getMessage() );
 
 			$this->merge_fields[ $list_id ] = array();
 
@@ -2166,12 +2192,12 @@ class GFMailChimp extends GFFeedAddOn {
 	}
 
 	/**
-	 * Get specific MailChimp merge field by tag.
+	 * Get specific Mailchimp merge field by tag.
 	 *
 	 * @since  4.2.4
 	 * @access public
 	 *
-	 * @param string $list_id List ID to get merge fields for.
+	 * @param string $list_id List/Audience ID to get merge fields for.
 	 * @param string $tag     Merge field tag.
 	 *
 	 * @uses GFMailChimp::get_list_merge_fields()
@@ -2180,7 +2206,7 @@ class GFMailChimp extends GFFeedAddOn {
 	 */
 	public function get_list_merge_field( $list_id = '', $tag = '' ) {
 
-		// Get the merge fields for list.
+		// Get the merge fields for list/audience.
 		$merge_fields = $this->get_list_merge_fields( $list_id );
 
 		// If no merge fields were provided, return.
@@ -2259,23 +2285,23 @@ class GFMailChimp extends GFFeedAddOn {
 
 		// If API cannot be initialized, exit.
 		if ( ! $this->initialize_api() ) {
-			$this->log_error( __METHOD__ . '(): Unable to convert MailChimp groups to interest categories because API could not be initialized.' );
+			$this->log_error( __METHOD__ . '(): Unable to convert Mailchimp groups to interest categories because API could not be initialized.' );
 			return;
 		}
 
 		// Get plugin settings.
 		$settings = $this->get_plugin_settings();
 
-		// Get MailChimp feeds.
+		// Get Mailchimp feeds.
 		$feeds = $this->get_feeds();
 
 		$list_interest_categories    = array();
 		$interest_category_interests = array();
 
-		// Loop through MailChimp feeds.
+		// Loop through Mailchimp feeds.
 		foreach ( $feeds as $feed ) {
 
-			// If no list ID is set, skip it.
+			// If no list/audience ID is set, skip it.
 			if ( ! rgars( $feed, 'meta/mailchimpList' ) ) {
 				continue;
 			}
@@ -2288,7 +2314,7 @@ class GFMailChimp extends GFFeedAddOn {
 				$list_id = $feed['meta']['mailchimpList'];
 
 				if ( ! isset( $list_interest_categories[ $list_id ] ) ) {
-					// Get interest categories for list.
+					// Get interest categories for list/audience.
 					$list_interest_categories[ $list_id ] = $this->api->get_list_interest_categories( $list_id );
 				}
 
@@ -2297,7 +2323,7 @@ class GFMailChimp extends GFFeedAddOn {
 			} catch ( Exception $e ) {
 
 				// Log that we could not get interest categories.
-				$this->log_error( __METHOD__ . '(): Unable to updated feed #' . $feed['id'] . ' because interest categories could not be retrieved for MailChimp list ' . $feed['meta']['mailchimpList'] );
+				$this->log_error( __METHOD__ . '(): Unable to updated feed #' . $feed['id'] . ' because interest categories could not be retrieved for Mailchimp audience ' . $feed['meta']['mailchimpList'] );
 
 				continue;
 
@@ -2328,7 +2354,7 @@ class GFMailChimp extends GFFeedAddOn {
 			// Loop through feed meta.
 			foreach ( $feed['meta'] as $key => $value ) {
 
-				// If this is not a MailChimp group key, skip it.
+				// If this is not a Mailchimp group key, skip it.
 				if ( 0 !== strpos( $key, 'mc_group_' ) ) {
 					continue;
 				}
@@ -2336,14 +2362,14 @@ class GFMailChimp extends GFFeedAddOn {
 				// Explode meta key.
 				$exploded_key = explode( '_', $key );
 
-				// Get MailChimp group key.
+				// Get Mailchimp group key.
 				$mc_key = $exploded_key[0] . '_' . $exploded_key[1] . '_' . $exploded_key[2];
 				unset( $exploded_key[0], $exploded_key[1], $exploded_key[2] );
 
 				// Get meta key without group name.
 				$meta_key = implode( '_', $exploded_key );
 
-				// Get settings key for MailChimp group key.
+				// Get settings key for Mailchimp group key.
 				$settings_key = array_search( $mc_key, $settings );
 
 				// Get sanitized group name.
@@ -2377,7 +2403,7 @@ class GFMailChimp extends GFFeedAddOn {
 	}
 
 	/**
-	 * Upgrade versions of MailChimp Add-On before 3.0 to the Add-On Framework.
+	 * Upgrade versions of Mailchimp Add-On before 3.0 to the Add-On Framework.
 	 *
 	 * @since  4.0
 	 * @access public
