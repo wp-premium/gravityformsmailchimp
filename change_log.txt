@@ -1,3 +1,24 @@
+### 5.2 | 2023-02-15
+- Added Gravity Forms license key to oAuth process.
+- Added support for async (background) feed processing to improve form submission performance.
+- Fixed an issue that prevents the Marketing Permission setting from being applied to users in certain situations.
+- Fixed an issue where the opt-in email is not sending to already pending members when they resubscribe.
+
+### 5.1 | 2022-05-11
+- Fixed an issue where the save settings button isn't visible when creating or editing a feed.
+- Fixed a display issue with some conditional logic feed settings.
+- Fixed an issue where API calls are being made on all admin pages when checking for deprecated keys.
+
+
+### 5.0 | 2021-09-29
+- Updated the authorization flow to connect to the Mailchimp API via Oauth.
+
+
+### 4.9 | 2021-04-28
+- Fixed an issue where conditional logic is not correctly identifying matching selections when forms contain a multi-select field.
+- Fixed an issue where the add-on icon is missing on the form settings screen in Gravity Forms 2.5.
+
+
 ### 4.8 | 2020-09-09
 - Added support for Gravity Forms 2.5.
 - Fixed birthday merge fields no longer being sent in the correct format expected by the Mailchimp API.
