@@ -17,6 +17,8 @@ GFForms::include_feed_addon_framework();
  */
 class GFMailChimp extends GFFeedAddOn {
 
+	const POST_ACTION = 'gravityformsmailchimp_disconnect';
+
 	/**
 	 * Contains an instance of this class, if available.
 	 *
@@ -25,6 +27,15 @@ class GFMailChimp extends GFFeedAddOn {
 	 * @var    GFMailChimp $_instance If available, contains an instance of this class.
 	 */
 	private static $_instance = null;
+
+	/**
+	 * Enabling background feed processing.
+	 *
+	 * @since 5.1.1
+	 *
+	 * @var bool
+	 */
+	protected $_async_feed_processing = true;
 
 	/**
 	 * Defines the version of the Mailchimp Add-On.
@@ -232,6 +243,23 @@ class GFMailChimp extends GFFeedAddOn {
 	}
 
 	/**
+	 * Add actions for admin_init
+	 *
+	 * @since 4.10
+	 *
+	 * @return void
+	 */
+	public function init_admin() {
+		parent::init_admin();
+
+		add_action( 'admin_init', array( $this, 'maybe_update_auth_creds' ) );
+		if ( GFForms::is_gravity_page() ) {
+			add_action( 'admin_init', array( $this, 'warn_for_deprecated_key' ) );
+		}
+		add_action( 'admin_post_' . self::POST_ACTION, array( $this, 'handle_disconnection' ) );
+	}
+
+	/**
 	 * Remove unneeded settings.
 	 *
 	 * @since  4.0
@@ -260,11 +288,14 @@ class GFMailChimp extends GFFeedAddOn {
 
 		$styles = array(
 			array(
-				'handle'  => $this->_slug . '_form_settings',
+				'handle'  => 'gravityformsmailchimp_form_settings',
 				'src'     => $this->get_base_url() . "/css/form_settings{$min}.css",
 				'version' => $this->_version,
 				'enqueue' => array(
-					array( 'admin_page' => array( 'form_settings' ) ),
+					array(
+						'admin_page' => array( 'plugin_settings', 'form_settings' ),
+						'tab'        => $this->_slug,
+					),
 				),
 			),
 		);
@@ -282,13 +313,119 @@ class GFMailChimp extends GFFeedAddOn {
 	 */
 	public function get_menu_icon() {
 
-		return file_get_contents( $this->get_base_path() . '/images/menu-icon.svg' );
+		return $this->is_gravityforms_supported( '2.5-beta-4' ) ? 'gform-icon--mailchimp' : 'dashicons-admin-generic';
 
 	}
 
 
+	// # OAUTH SETTINGS -----------------------------------------------------------------------------------------------
 
+	/**
+	 * Get the authorization payload data.
+	 *
+	 * Returns the auth POST request if it's present, otherwise attempts to return a recent transient cache.
+	 *
+	 * @since 3.10
+	 *
+	 * @return array
+	 */
+	private function get_oauth_payload() {
+		$payload = array_filter(
+			array(
+				'auth_payload' => rgpost( 'auth_payload' ),
+				'state'        => rgpost( 'state' ),
+				'auth_error'   => rgpost( 'auth_error' ),
+			)
+		);
 
+		if ( count( $payload ) === 2 || isset( $payload['auth_error'] ) ) {
+			return $payload;
+		}
+
+		$payload = get_transient( "gravityapi_response_{$this->_slug}" );
+
+		if ( ! is_array( $payload ) ) {
+			return array();
+		}
+
+		delete_transient( "gravityapi_response_{$this->_slug}" );
+
+		return $payload;
+	}
+
+	/**
+	 * Update Auth Creds if they have changed.
+	 *
+	 * @since 4.10
+	 *
+	 * @return void
+	 */
+	public function maybe_update_auth_creds() {
+		$payload = $this->get_oauth_payload();
+
+		// No payload, bail.
+		if ( empty( $payload ) ) {
+			return;
+		}
+
+		// Auth Error form API - log and bail.
+		if ( isset( $payload['auth_error'] ) ) {
+			$this->add_error_notice( __METHOD__, 'error authenticating with the API Server' );
+
+			return;
+		}
+
+		$state        = $payload['state'];
+		$auth_payload = json_decode( $payload['auth_payload'], true );
+
+		// State didn't pass our nonce - log and bail.
+		if ( $state !== get_transient( "gravityapi_request_{$this->_slug}" ) ) {
+			$this->add_error_notice( __METHOD__, 'could not verify the state value from the API Server.' );
+
+			return;
+		}
+
+		// Incorrect/missing auth data - log and bail.
+		if ( ! isset( $auth_payload['access_token'] ) || ! isset( $auth_payload['server_prefix'] ) ) {
+			$this->add_error_notice( __METHOD__, 'missing access_token or server_prefix in API response.' );
+
+			return;
+		}
+
+		// Store the auth payload.
+		$this->update_plugin_settings( $auth_payload );
+	}
+
+	/**
+	 * Add an error notice to admin if something goes awry. Also logs error to error_log.
+	 *
+	 * @since 4.10
+	 *
+	 * @param string $method  The method being called.
+	 * @param string $message The message to display.
+	 *
+	 * @return void
+	 */
+	private function add_error_notice( $method, $message ) {
+		add_action( 'admin_notices', function () {
+			$message = __( 'Could not authenticate with Mailchimp.', 'gravityformsmailchimp' );
+
+			printf( '<div class="notice below-h1 notice-error gf-notice"><p>%1$s</p></div>', esc_html( $message ) );
+		} );
+
+		$this->log_error( $method . ': ' . $message );
+	}
+
+	/**
+	 * Get the authentication state, which was created from a wp nonce.
+	 *
+	 * @since 4.10
+	 *
+	 * @return string
+	 */
+	private function get_authentication_state_action() {
+		return 'gform_mailchimp_authentication_state';
+	}
 
 	// # PLUGIN SETTINGS -----------------------------------------------------------------------------------------------
 
@@ -304,19 +441,20 @@ class GFMailChimp extends GFFeedAddOn {
 
 		return array(
 			array(
-				'description' => '<p>' .
-					sprintf(
-						esc_html__( 'Mailchimp makes it easy to send email newsletters to your customers, manage your subscriber audiences, and track campaign performance. Use Gravity Forms to collect customer information and automatically add it to your Mailchimp subscriber audience. If you don\'t have a Mailchimp account, you can %1$ssign up for one here.%2$s', 'gravityformsmailchimp' ),
-						'<a href="http://www.mailchimp.com/" target="_blank">', '</a>'
-					)
-					. '</p>',
+				// translators: %1 is an opening <a> tag, and %2 is a closing </a> tag.
+				'description' => '<p>' . sprintf( esc_html__( 'Mailchimp makes it easy to send email newsletters to your customers, manage your subscriber audiences, and track campaign performance. Use Gravity Forms to collect customer information and automatically add it to your Mailchimp subscriber audience. If you don\'t have a Mailchimp account, you can %1$ssign up for one here.%2$s', 'gravityformsmailchimp' ), '<a href="http://www.mailchimp.com/" target="_blank">', '</a>' ) . '</p>',
 				'fields'      => array(
+
 					array(
-						'name'              => 'apiKey',
-						'label'             => esc_html__( 'Mailchimp API Key', 'gravityformsmailchimp' ),
-						'type'              => 'text',
-						'class'             => 'medium',
+						'name'              => 'connection',
+						'type'              => 'html',
 						'feedback_callback' => array( $this, 'initialize_api' ),
+						'html'              => array( $this, 'render_connection_button' ),
+						'callback'          => array( $this, 'render_connection_button' ),
+					),
+					array(
+						'type' => 'save',
+						'class'  => 'hidden',
 					),
 				),
 			),
@@ -324,8 +462,169 @@ class GFMailChimp extends GFFeedAddOn {
 
 	}
 
+	/**
+	 * Render the Connection Button on the Settings Page.
+	 *
+	 * @since 4.10
+	 *
+	 * @return string
+	 */
+	public function render_connection_button() {
+		$valid = $this->is_valid_connection();
 
+		if ( ! $valid ) {
+			$nonce          = wp_create_nonce( $this->get_authentication_state_action() );
+			$transient_name = 'gravityapi_request_' . $this->_slug;
 
+			if ( get_transient( $transient_name ) ) {
+				delete_transient( $transient_name );
+			}
+
+			set_transient( $transient_name, $nonce, 10 * MINUTE_IN_SECONDS );
+		}
+
+		$before = $this->get_before_button_content( $valid );
+		$button = $this->get_button_content( $valid );
+		$after  = $this->get_after_button_content( $valid );
+
+		if ( version_compare( GFForms::$version, '2.5', '<' ) ) {
+			echo $before . $button . $after;
+
+			return;
+		}
+
+		return $before . $button . $after;
+	}
+
+	/**
+	 * Get the markup to display before the connect button.
+	 *
+	 * @since 4.10
+	 *
+	 * @param bool $valid Whether the current connection is valid.
+	 *
+	 * @return string
+	 */
+	private function get_before_button_content( $valid ) {
+		$html = '';
+
+		if ( ! $valid ) {
+			return '';
+		}
+
+		$account = $this->api->account_details();
+		$name    = isset( $account['account_name'] ) ? $account['account_name'] : false;
+		$html    .= '<p><span class="gform-status-indicator gform-status--active gform-status--static">';
+
+		if ( $name ) {
+			$html .= esc_html__( 'Connected to Mailchimp as: ', 'gravityformsmailchimp' );
+			$html .= esc_html( $name ) . '</span></p>';
+		} else {
+			$html .= esc_html__( 'Connected to Mailchimp.', 'gravityformsmailchimp' );
+			$html .= '</span></p>';
+		}
+
+		/**
+		 * Allows third-party code to modify the HTML content which appears before the Connect button.
+		 *
+		 * @since 4.10
+		 *
+		 * @param string $html  The current HTML markup.
+		 * @param bool   $valid Whether the current API connection is valid (connected and using oAuth).
+		 *
+		 * @return string
+		 */
+		return apply_filters( 'gform_mailchimp_before_connect_button', $html, $valid );
+	}
+
+	/**
+	 * Get the markup to display the connect button.
+	 *
+	 * @since 4.10
+	 *
+	 * @param bool $valid Whether the current connection is valid.
+	 *
+	 * @return string
+	 */
+	private function get_button_content( $valid ) {
+		$html = sprintf(
+			'<a href="%1$s" target="%3$s" class="gform-button %4$s">%2$s</a>',
+			$valid ? $this->get_disconnect_url() : $this->get_connect_url(),
+			$valid ? __( 'Disconnect from Mailchimp', 'gravityformsmailchimp' ) : __( 'Connect to Mailchimp', 'gravityformsmailchimp' ),
+			'_self',
+			$valid ? 'gform-button--secondary' : 'gform-button--primary'
+		);
+
+		/**
+		 * Allows third-party code to modify the Connect button HTML markup.
+		 *
+		 * @since 4.10
+		 *
+		 * @param string $html  The current button HTML markup.
+		 * @param bool   $valid Whether the current API connection is valid (connected and using oAuth).
+		 *
+		 * @return string
+		 */
+		return apply_filters( 'gform_mailchimp_connect_button', $html, $valid );
+	}
+
+	/**
+	 * Get the markup to display after the connect button.
+	 *
+	 * @since 4.10
+	 *
+	 * @param bool $valid Whether the current connection is valid.
+	 *
+	 * @return string
+	 */
+	private function get_after_button_content( $valid ) {
+		if ( ! $valid ) {
+			return '';
+		}
+
+		$html = '<p><em>';
+		// translators: %1 is an opening <a> tag, and %2 is a closing </a> tag.
+		$html .= sprintf( __( 'In order to remove this site from your Mailchimp account, you\'ll need to remove it from your Mailchimp Account. %1$sLearn More.%2$s' ), '<a href="https://docs.gravityforms.com/mailchimp-disconnect-account/">', '</a>' );
+		$html .= '</em></p>';
+
+		/**
+		 * Allows third-party code to modify the HTML content which appears after the Connect button.
+		 *
+		 * @since 4.10
+		 *
+		 * @param string $html  The current HTML markup.
+		 * @param bool   $valid Whether the current API connection is valid (connected and using oAuth).
+		 *
+		 * @return string
+		 */
+		return apply_filters( 'gform_mailchimp_after_connect_button', $html, $valid );
+	}
+
+	/**
+	 * Get the correct disconnect URL
+	 *
+	 * @since 4.10
+	 *
+	 * @return string
+	 */
+	private function get_disconnect_url() {
+		return add_query_arg( array( 'action' => self::POST_ACTION ), admin_url( 'admin-post.php' ) );
+	}
+
+	/**
+	 * Get the correct connect URL
+	 *
+	 * @since 4.10
+	 *
+	 * @return string
+	 */
+	private function get_connect_url() {
+		$settings_url = urlencode( admin_url( 'admin.php?page=gf_settings&subview=' . $this->_slug ) );
+		$connect_url  = sprintf( '%1$s/auth/mailchimp', GRAVITY_API_URL );
+		$nonce        = wp_create_nonce( $this->get_authentication_state_action() );
+
+		return add_query_arg( array( 'redirect_to' => $settings_url, 'state' => $nonce, 'license' => GFCommon::get_key() ), $connect_url );
+	}
 
 
 	// # FEED SETTINGS -------------------------------------------------------------------------------------------------
@@ -417,11 +716,11 @@ class GFMailChimp extends GFFeedAddOn {
 						),
 					),
 					array(
-						'name'  => 'tags',
-						'type'  => 'text',
-						'class' => 'medium merge-tag-support mt-position-right mt-hide_all_fields',
-						'label' => esc_html__( 'Tags', 'gravityformsmailchimp' ),
-						'tooltip'       => sprintf(
+						'name'    => 'tags',
+						'type'    => 'text',
+						'class'   => 'medium merge-tag-support mt-position-right mt-hide_all_fields',
+						'label'   => esc_html__( 'Tags', 'gravityformsmailchimp' ),
+						'tooltip' => sprintf(
 							'<h6>%s</h6>%s',
 							esc_html__( 'Tags', 'gravityformsmailchimp' ),
 							esc_html__( 'Associate tags to your Mailchimp contacts with a comma separated list (e.g. new lead, Gravity Forms, web source). Commas within a merge tag value will be created as a single tag.', 'gravityformsmailchimp' )
@@ -443,7 +742,10 @@ class GFMailChimp extends GFFeedAddOn {
 							esc_html__( 'When conditional logic is enabled, form submissions will only be exported to Mailchimp when the conditions are met. When disabled all form submissions will be exported.', 'gravityformsmailchimp' )
 						),
 					),
-					array( 'type' => 'save' ),
+					array(
+						'type'       => 'save',
+						'dependency' => 'mailchimpList',
+					),
 				),
 			),
 		);
@@ -769,6 +1071,7 @@ class GFMailChimp extends GFFeedAddOn {
 		// If no categories are found, return.
 		if ( empty( $categories ) ) {
 			$this->log_debug( __METHOD__ . '(): No categories found.' );
+
 			return '';
 		}
 
@@ -848,7 +1151,7 @@ class GFMailChimp extends GFFeedAddOn {
 		$is_enabled                = $this->get_setting( $condition_enabled_setting ) == '1';
 		$container_style           = ! $is_enabled ? "style='display:none;'" : '';
 
-		$str = "<div id='{$setting_name_root}_condition_container' {$container_style} class='condition_container'>" .
+		$str = "<div id='{$setting_name_root}_condition_container' {$container_style} class='condition_container gform-settings-field__conditional-logic'>" .
 		       esc_html__( 'Assign to group:', 'gravityformsmailchimp' ) . ' ';
 
 		$str .= $this->settings_select(
@@ -876,7 +1179,7 @@ class GFMailChimp extends GFFeedAddOn {
 
 		$conditional_style = $decision == 'always' ? "style='display:none;'" : '';
 
-		$str .= '   <span id="' . $setting_name_root . '_decision_container" class="gform-settings-simple-condition" ' . $conditional_style . '><br />' .
+		$str .= '   <span id="' . $setting_name_root . '_decision_container" class="gform-settings-simple-condition gf_conditional_logic_rules_container" ' . $conditional_style . '><br />' .
 		        $this->simple_condition( $setting_name_root, $is_enabled ) .
 		        '   </span>' .
 
@@ -982,7 +1285,7 @@ class GFMailChimp extends GFFeedAddOn {
 		$container_style           = ! $is_enabled ? "style='display:none;'" : '';
 
 		$str = sprintf(
-			'<div id="%s_condition_container" %s class="condition_container gf_animate_sub_settings"><span id="%s_condition_label" class="condition_label">%s</span>',
+			'<div id="%s_condition_container" %s class="condition_container gf_animate_sub_settings gform-settings-field__conditional-logic"><span id="%s_condition_label" class="condition_label">%s</span>',
 			$setting_name_root,
 			$container_style,
 			$setting_name_root,
@@ -990,11 +1293,11 @@ class GFMailChimp extends GFFeedAddOn {
 		);
 
 
-		$str .= '   <span id="' . $setting_name_root . '_decision_container" class="gform-settings-simple-condition"><br />' .
-				$this->simple_condition( $setting_name_root, $is_enabled ) .
-				'   </span>' .
+		$str .= '   <span id="' . $setting_name_root . '_decision_container" class="gform-settings-simple-condition gf_conditional_logic_rules_container"><br />' .
+		        $this->simple_condition( $setting_name_root, $is_enabled ) .
+		        '   </span>' .
 
-				'</div>';
+		        '</div>';
 
 		return $str;
 
@@ -1127,6 +1430,7 @@ class GFMailChimp extends GFFeedAddOn {
 		// If unable to initialize API, log error and return.
 		if ( ! $this->initialize_api() ) {
 			$this->add_feed_error( esc_html__( 'Unable to process feed because API could not be initialized.', 'gravityformsmailchimp' ), $feed, $entry, $form );
+
 			return $entry;
 		}
 
@@ -1142,6 +1446,7 @@ class GFMailChimp extends GFFeedAddOn {
 		// If email address is invalid, log error and return.
 		if ( GFCommon::is_invalid_or_empty_email( $email ) ) {
 			$this->add_feed_error( esc_html__( 'A valid Email address must be provided.', 'gravityformsmailchimp' ), $feed, $entry, $form );
+
 			return $entry;
 		}
 
@@ -1204,7 +1509,7 @@ class GFMailChimp extends GFFeedAddOn {
 				$field_value_timestamp = strtotime( $field_value );
 
 				// Format date.
-				switch( $date_format ) {
+				switch ( $date_format ) {
 
 					case 'DD/MM':
 					case 'MM/DD':
@@ -1277,6 +1582,7 @@ class GFMailChimp extends GFFeedAddOn {
 		// If member is unsubscribed and resubscription is not allowed, exit.
 		if ( 'unsubscribed' == $member_status && ! $allow_resubscription ) {
 			$this->log_debug( __METHOD__ . '(): User is unsubscribed and resubscription is not allowed.' );
+
 			return;
 		}
 
@@ -1285,10 +1591,10 @@ class GFMailChimp extends GFFeedAddOn {
 		 *
 		 * @since 1.9
 		 *
-		 * @param bool   $keep_existing_interests Should user keep existing interest categories?
-		 * @param array  $form                    The form object.
-		 * @param array  $entry                   The entry object.
-		 * @param array  $feed                    The feed object.
+		 * @param bool  $keep_existing_interests Should user keep existing interest categories?
+		 * @param array $form                    The form object.
+		 * @param array $entry                   The entry object.
+		 * @param array $feed                    The feed object.
 		 */
 		$keep_existing_interests = gf_apply_filters( array( 'gform_mailchimp_keep_existing_groups', $form['id'] ), true, $form, $entry, $feed );
 
@@ -1349,7 +1655,7 @@ class GFMailChimp extends GFFeedAddOn {
 		}
 
 		// Get tags.
-		$tags = explode(',', rgars( $feed, 'meta/tags' ) );
+		$tags = explode( ',', rgars( $feed, 'meta/tags' ) );
 		$tags = array_map( 'trim', $tags );
 
 		// Prepare tags.
@@ -1428,6 +1734,28 @@ class GFMailChimp extends GFFeedAddOn {
 		$subscription['email_address'] = $subscription['email']['email'];
 		unset( $subscription['email'] );
 
+		// If member exists, status is pending, and is double opt-in, then update member status to unsubscribed first.
+		if ( $member && rgar( $member, 'status' ) === 'pending' && rgars( $feed, 'meta/double_optin' ) ) {
+			try {
+				// Log that we are patching member status.
+				$this->log_debug( __METHOD__ . '(): Patching member status for opt-in.' );
+
+				// Update member status to unsubscribed.
+				$this->api->update_list_member( $list_id, $subscription['email_address'], array( 'status' => 'unsubscribed' ), 'PATCH' );
+
+				// Log that the subscription was successfully updated.
+				$this->log_debug( __METHOD__ . '(): Member status successfully updated.' );
+			} catch ( Exception $e ) {
+				// Log that member status could not be updated.
+				$this->add_feed_error( sprintf( esc_html__( __METHOD__ . '(): Unable to update member status: %s', 'gravityformsmailchimp' ), $e->getMessage() ), $feed, $entry, $form );
+
+				// Log field errors.
+				if ( $e->hasErrors() ) {
+					$this->log_error( __METHOD__ . '(): Error when attempting to update member status: ' . print_r( $e->getErrors(), true ) );
+				}
+			}
+		}
+
 		/**
 		 * Modify the subscription object before it is executed.
 		 *
@@ -1486,7 +1814,7 @@ class GFMailChimp extends GFFeedAddOn {
 
 					// Check condition and add to subscription.
 					$subscription['marketing_permissions'][] = array(
-						'marketing_permission_id' => $existing_permission['marketing_permission_id'],
+						'marketing_permission_id' => (string) $existing_permission['marketing_permission_id'],
 						'enabled'                 => $this->is_marketing_permission_condition_met( $permissions[ $existing_permission['marketing_permission_id'] ], $form, $entry ),
 					);
 
@@ -1499,7 +1827,7 @@ class GFMailChimp extends GFFeedAddOn {
 
 					// Add to subscription.
 					$subscription['marketing_permissions'][] = array(
-						'marketing_permission_id' => $permission_id,
+						'marketing_permission_id' => (string) $permission_id,
 						'enabled'                 => $this->is_marketing_permission_condition_met( $permission, $form, $entry ),
 					);
 
@@ -1722,18 +2050,60 @@ class GFMailChimp extends GFFeedAddOn {
 	}
 
 
-
-
-
 	// # HELPERS -------------------------------------------------------------------------------------------------------
+
+	/**
+	 * Returns the currently saved plugin settings
+	 *
+	 * @since Unknown
+	 *
+	 * @return array|false
+	 */
+	public function get_plugin_settings() {
+		$settings = get_option( 'gravityformsaddon_' . $this->_slug . '_settings' );
+
+		if ( $this->is_connection_legacy() ) {
+			$settings['access_token']  = $settings['apiKey'];
+			$exploded_key              = explode( '-', $settings['apiKey'] );
+			$settings['server_prefix'] = isset( $exploded_key[1] ) ? $exploded_key[1] : 'us1';
+		}
+
+		return $settings;
+	}
+
+	/**
+	 * Determine whether a currently-existing connection to Mailchimp is using the legacy
+	 * API Key paradigm.
+	 *
+	 * @since 4.10
+	 *
+	 * @return bool
+	 */
+	private function is_connection_legacy() {
+		$settings = get_option( 'gravityformsaddon_' . $this->_slug . '_settings' );
+
+		return ( ! isset( $settings['access_token'] ) && isset( $settings['apiKey'] ) );
+	}
+
+	/**
+	 * Determine if the current connection to Mailchimp is valid (it connects without error and
+	 * uses OAuth instead of an API Key)
+	 *
+	 * @since 4.10
+	 *
+	 * @return bool
+	 */
+	private function is_valid_connection() {
+		return $this->initialize_api() && ! $this->is_connection_legacy();
+	}
 
 	/**
 	 * Initializes Mailchimp API if credentials are valid.
 	 *
 	 * @since  4.0
-	 * @access public
+	 * @since  4.10 - Deprecated API Key param.
 	 *
-	 * @param string $api_key Mailchimp API key.
+	 * @access public
 	 *
 	 * @uses GFAddOn::get_plugin_setting()
 	 * @uses GFAddOn::log_debug()
@@ -1742,28 +2112,30 @@ class GFMailChimp extends GFFeedAddOn {
 	 *
 	 * @return bool|null
 	 */
-	public function initialize_api( $api_key = null ) {
+	public function initialize_api( $deprecated = null ) {
+
+		if ( ! empty( $deprecated ) ) {
+			_deprecated_argument( __METHOD__, '4.10' );
+		}
 
 		// If API is already initialized, return true.
 		if ( ! is_null( $this->api ) ) {
 			return true;
 		}
 
-		// Get the API key.
-		if ( rgblank( $api_key ) ) {
-			$api_key = $this->get_plugin_setting( 'apiKey' );
-		}
-
-		// If the API key is blank, do not run a validation check.
-		if ( rgblank( $api_key ) ) {
-			return null;
-		}
-
 		// Log validation step.
 		$this->log_debug( __METHOD__ . '(): Validating API Info.' );
 
+		$this->maybe_update_auth_creds();
+
+		$settings = $this->get_plugin_settings();
+
+		if ( ! isset( $settings['access_token'] ) || ! isset( $settings['server_prefix'] ) ) {
+			return false;
+		}
+
 		// Setup a new Mailchimp object with the API credentials.
-		$mc = new GF_MailChimp_API( $api_key );
+		$mc = new GF_MailChimp_API( $settings['access_token'], $settings['server_prefix'] );
 
 		try {
 
@@ -1781,7 +2153,7 @@ class GFMailChimp extends GFFeedAddOn {
 		} catch ( Exception $e ) {
 
 			// Log that authentication test failed.
-			$this->log_error( __METHOD__ . '(): Unable to authenticate with Mailchimp; '. $e->getMessage() );
+			$this->log_error( __METHOD__ . '(): Unable to authenticate with Mailchimp; ' . $e->getMessage() );
 
 			return false;
 
@@ -1842,7 +2214,7 @@ class GFMailChimp extends GFFeedAddOn {
 	/**
 	 * Get available marketing permissions for a list/audience.
 	 *
-	 * @since 4.6
+	 * @since  4.6
 	 * @access public
 	 *
 	 * @param string $list_id Mailchimp List/Audience ID.
@@ -2025,40 +2397,44 @@ class GFMailChimp extends GFFeedAddOn {
 	 * @return bool
 	 */
 	public function is_category_condition_met( $category, $form, $entry ) {
-
-		if ( ! $category['enabled'] ) {
-
+		if ( ! rgar( $category, 'enabled' ) ) {
 			$this->log_debug( __METHOD__ . '(): Interest category not enabled. Returning false.' );
 
 			return false;
+		}
 
-		} else if ( $category['decision'] == 'always' ) {
-
+		if ( rgar( $category, 'decision' ) == 'always' ) {
 			$this->log_debug( __METHOD__ . '(): Interest category decision is always. Returning true.' );
 
 			return true;
-
 		}
 
-		$field = GFFormsModel::get_field( $form, $category['field'] );
+		$category_field = rgar( $category, 'field' );
+		$field          = GFFormsModel::get_field( $form, $category_field );
 
 		if ( ! is_object( $field ) ) {
-
-			$this->log_debug( __METHOD__ . "(): Field #{$category['field']} not found. Returning true." );
+			$this->log_debug( __METHOD__ . "(): Field #{$category_field} not found. Returning true." );
 
 			return true;
-
-		} else {
-
-			$field_value    = GFFormsModel::get_lead_field_value( $entry, $field );
-			$is_value_match = GFFormsModel::is_value_match( $field_value, $category['value'], $category['operator'] );
-
-			$this->log_debug( __METHOD__ . "(): Add to interest category if field #{$category['field']} value {$category['operator']} '{$category['value']}'. Is value match? " . var_export( $is_value_match, 1 ) );
-
-			return $is_value_match;
-
 		}
 
+		// Prepare values for field matching and log output.
+		$category_value    = rgar( $category, 'value' );
+		$category_operator = rgar( $category, 'operator' );
+		$rule              = array_merge( $category, array( 'fieldId' => $field->id ) );
+
+		// Check for the value match.
+		$is_value_match = GFFormsModel::is_value_match(
+			GFFormsModel::get_lead_field_value( $entry, $field ),
+			$category_value,
+			$category_operator,
+			$field,
+			$rule
+		);
+
+		$this->log_debug( __METHOD__ . "(): Add to interest category if field #{$category_field} value {$category_operator} '{$category_value}'. Is value match? " . var_export( $is_value_match, 1 ) );
+
+		return $is_value_match;
 	}
 
 
@@ -2078,6 +2454,7 @@ class GFMailChimp extends GFFeedAddOn {
 
 		if ( ! $permission['enabled'] ) {
 			$this->log_debug( __METHOD__ . '(): Marketing Permission not enabled. Returning false.' );
+
 			return false;
 		}
 
@@ -2087,6 +2464,7 @@ class GFMailChimp extends GFFeedAddOn {
 		if ( ! is_object( $field ) ) {
 
 			$this->log_debug( __METHOD__ . "(): Field #{$permission['field']} not found. Returning true." );
+
 			return true;
 
 		} else {
@@ -2286,6 +2664,7 @@ class GFMailChimp extends GFFeedAddOn {
 		// If API cannot be initialized, exit.
 		if ( ! $this->initialize_api() ) {
 			$this->log_error( __METHOD__ . '(): Unable to convert Mailchimp groups to interest categories because API could not be initialized.' );
+
 			return;
 		}
 
@@ -2669,7 +3048,7 @@ class GFMailChimp extends GFFeedAddOn {
 	 * Retrieve the group setting key.
 	 *
 	 * @param string $grouping_id The group ID.
-	 * @param string $group_name The group name.
+	 * @param string $group_name  The group name.
 	 *
 	 * @return string
 	 */
@@ -2691,6 +3070,55 @@ class GFMailChimp extends GFFeedAddOn {
 		}
 
 		return $plugin_settings[ $key ];
+	}
+
+	/**
+	 * Add a warning if the current connection uses the (deprecated) API Key connection method.
+	 *
+	 * @since 4.10
+	 *
+	 * @return void
+	 */
+	public function warn_for_deprecated_key() {
+		$api_key = $this->get_plugin_setting( 'apiKey' );
+		if ( empty( $api_key ) ) {
+			return;
+		}
+
+		$initialized = $this->initialize_api();
+
+		if ( ! $initialized ) {
+			return;
+		}
+
+		add_action(
+			'admin_notices',
+			function () {
+				$settings_url = admin_url( 'admin.php?page=gf_settings&subview=' . $this->_slug );
+
+				// translators: %1 is an opening <a> tag, and %2 is a closing </a> tag.
+				$message = sprintf( __( 'It looks like you\'re using an API Key to connect to Mailchimp. Please visit the %1$sMailchimp settings page%2$s in order to connect to the Mailchimp API.', 'gravityformsmailchimp' ), "<a href='${settings_url}'>", '</a>' );
+
+				printf( '<div class="notice below-h1 notice-error gf-notice"><p>%1$s</p></div>', $message );
+			}
+		);
+
+		$this->log_error( __METHOD__ . ': user has API Key but has not connected to oAuth.' );
+	}
+
+	/**
+	 * Removes the stored API settings when disconnecting.
+	 *
+	 * @since  4.10
+	 *
+	 * @action admin_post_{self::POST_ACTION}
+	 *
+	 * @return void
+	 */
+	public function handle_disconnection() {
+		delete_option( 'gravityformsaddon_' . $this->_slug . '_settings' );
+		$redirect_url = admin_url( 'admin.php?page=gf_settings&subview=' . $this->_slug );
+		wp_safe_redirect( $redirect_url );
 	}
 
 }

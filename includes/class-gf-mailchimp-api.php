@@ -31,21 +31,20 @@ class GF_MailChimp_API {
 	/**
 	 * Initialize API library.
 	 *
-	 * @since  4.0
+	 * @since 4.0
+	 * @since 4.10 - Transitioned to oAuth2 Connections with Access Tokens and Server Prefixes.
+	 *
 	 * @access public
 	 *
-	 * @param string $api_key (default: '') Mailchimp API key.
-	 *
-	 * @uses GF_MailChimp_API::set_data_center()
+	 * @param string $access_token Mailchimp oAuth2 Access Token.
+	 * @param string $server_prefix Mailchimp oAuth2 Server Prefix (Used as data center).
 	 */
-	public function __construct( $api_key = '' ) {
+	public function __construct( $access_token, $server_prefix = '' ) {
+		$this->api_key = $access_token;
 
-		// Assign API key to object.
-		$this->api_key = $api_key;
-
-		// Set data center.
-		$this->set_data_center();
-
+		if ( ! empty( $server_prefix ) ) {
+			$this->data_center = $server_prefix;
+		}
 	}
 
 	/**
@@ -71,7 +70,7 @@ class GF_MailChimp_API {
 	 * @since  4.6
 	 * @access public
 	 *
-	 * @param string $list_id       Mailchimp list/audience ID.
+	 * @param string $list_id Mailchimp list/audience ID.
 	 * @param string $email_address Email address.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
@@ -94,7 +93,7 @@ class GF_MailChimp_API {
 	 * @since  4.0
 	 * @access public
 	 *
-	 * @param string $list_id     Mailchimp list/audience ID.
+	 * @param string $list_id Mailchimp list/audience ID.
 	 * @param string $category_id Interest category ID.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
@@ -171,7 +170,7 @@ class GF_MailChimp_API {
 	 * @since  4.0
 	 * @access public
 	 *
-	 * @param string $list_id       Mailchimp list/audience ID.
+	 * @param string $list_id Mailchimp list/audience ID.
 	 * @param string $email_address Email address.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
@@ -195,7 +194,7 @@ class GF_MailChimp_API {
 	 * @access public
 	 *
 	 * @param string $list_id Mailchimp list/audience ID.
-	 * @param array  $options Additional settings.
+	 * @param array $options Additional settings.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
 	 *
@@ -231,23 +230,29 @@ class GF_MailChimp_API {
 	 * Add or update a Mailchimp list/audience member.
 	 *
 	 * @since  4.0
+	 * @since  5.2 - Add support for request method to allow PATCH requests.
 	 * @access public
 	 *
-	 * @param string $list_id       Mailchimp list/audience ID.
+	 * @param string $list_id Mailchimp list/audience ID.
 	 * @param string $email_address Email address.
-	 * @param array  $subscription  Subscription details.
+	 * @param array $subscription Subscription details.
+	 * @param string $method Request method. Defaults to PUT.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
 	 *
 	 * @return array
 	 * @throws GF_MailChimp_Exception|Exception
 	 */
-	public function update_list_member( $list_id, $email_address, $subscription ) {
+	public function update_list_member( $list_id, $email_address, $subscription, $method = 'PUT' ) {
+		// Make sure that method is either PUT or PATCH.
+		if ( ! in_array( $method, array( 'PUT', 'PATCH' ) ) ) {
+			throw Exception( __METHOD__ . '(): Method must be one of PUT or PATCH.' );
+		}
 
 		// Prepare subscriber hash.
 		$subscriber_hash = md5( strtolower( $email_address ) );
 
-		return $this->process_request( 'lists/' . $list_id . '/members/' . $subscriber_hash, $subscription, 'PUT' );
+		return $this->process_request( 'lists/' . $list_id . '/members/' . $subscriber_hash, $subscription, $method );
 
 	}
 
@@ -257,9 +262,9 @@ class GF_MailChimp_API {
 	 * @since  Unknown
 	 * @access public
 	 *
-	 * @param string $list_id       Mailchimp list/audience ID.
+	 * @param string $list_id Mailchimp list/audience ID.
 	 * @param string $email_address Email address.
-	 * @param array  $tags          Member tags.
+	 * @param array $tags Member tags.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
 	 *
@@ -281,9 +286,9 @@ class GF_MailChimp_API {
 	 * @since  4.0.10
 	 * @access public
 	 *
-	 * @param string $list_id       Mailchimp list/audience ID.
+	 * @param string $list_id Mailchimp list/audience ID.
 	 * @param string $email_address Email address.
-	 * @param string $note          The note to be added to the member.
+	 * @param string $note The note to be added to the member.
 	 *
 	 * @uses   GF_MailChimp_API::process_request()
 	 *
@@ -305,9 +310,9 @@ class GF_MailChimp_API {
 	 * @since  4.0
 	 * @access private
 	 *
-	 * @param string $path       Request path.
-	 * @param array  $data       Request data.
-	 * @param string $method     Request method. Defaults to GET.
+	 * @param string $path Request path.
+	 * @param array $data Request data.
+	 * @param string $method Request method. Defaults to GET.
 	 * @param string $return_key Array key from response to return. Defaults to null (return full response).
 	 *
 	 * @throws GF_MailChimp_Exception|Exception If API request returns an error, exception is thrown.
@@ -318,23 +323,30 @@ class GF_MailChimp_API {
 
 		// If API key is not set, throw exception.
 		if ( rgblank( $this->api_key ) ) {
-			throw new Exception( 'API key must be defined to process an API request.' );
+			throw new Exception( 'Access Token must be defined to process an API request.' );
 		}
 
 		// Build base request URL.
-		$request_url = 'https://' . $this->data_center . '.api.mailchimp.com/3.0/' . $path;
+		$request_url = 'https://' . $this->get_data_center() . '.api.mailchimp.com/3.0/' . $path;
 
 		// Add request URL parameters if needed.
 		if ( 'GET' === $method && ! empty( $data ) ) {
 			$request_url = add_query_arg( $data, $request_url );
 		}
 
+		$auth = 'Bearer ' . $this->api_key;
+
+		// Deprecated API Key method detected - use that for auth to prevent breakage.
+		if ( $this->get_data_center_from_api_key() ) {
+			$auth = 'Basic ' . base64_encode( ':' . $this->api_key );
+		}
+
 		// Build base request arguments.
 		$args = array(
-			'method'   => $method,
-			'headers'  => array(
+			'method'    => $method,
+			'headers'   => array(
 				'Accept'        => 'application/json',
-				'Authorization' => 'Basic ' . base64_encode( ':' . $this->api_key ),
+				'Authorization' => $auth,
 				'Content-Type'  => 'application/json',
 			),
 			/**
@@ -364,7 +376,7 @@ class GF_MailChimp_API {
 		/**
 		 * Filters the Mailchimp request arguments.
 		 *
-		 * @param array  $args The request arguments sent to Mailchimp.
+		 * @param array $args The request arguments sent to Mailchimp.
 		 * @param string $path The request path.
 		 *
 		 * @return array
@@ -427,19 +439,39 @@ class GF_MailChimp_API {
 	 * @since  4.0
 	 * @access private
 	 */
-	private function set_data_center() {
+	private function get_data_center() {
 
 		// If API key is empty, return.
 		if ( empty( $this->api_key ) ) {
 			return;
 		}
 
+		if ( ! empty( $this->data_center ) ) {
+			return $this->data_center;
+		}
+
+		$data_center = $this->get_data_center_from_api_key();
+
+		return $data_center ? $data_center : 'us1';
+	}
+
+	private function get_data_center_from_api_key() {
 		// Explode API key.
 		$exploded_key = explode( '-', $this->api_key );
 
 		// Set data center from API key.
-		$this->data_center = isset( $exploded_key[1] ) ? $exploded_key[1] : 'us1';
+		return isset( $exploded_key[1] ) ? $exploded_key[1] : false;
+	}
 
+	/**
+	 * Get disconnect link.
+	 *
+	 * @since 4.10
+	 *
+	 * @return string
+	 */
+	public function get_disconnect_url() {
+		return sprintf( 'https://%s.admin.mailchimp.com/account/api/', $this->data_center );
 	}
 
 }
